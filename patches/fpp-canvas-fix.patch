@@ -43,7 +43,7 @@ index 11578f4..d52d929 100644
        if (extraction == CanvasUtils::ImageExtraction::Placeholder) {
          dom::GeneratePlaceholderCanvasData(range->size(), range->Elements());
 -      } else if (extraction == CanvasUtils::ImageExtraction::Randomize) {
-+        else if (extraction == CanvasUtils::ImageExtraction::Randomize ||
++      } else if (extraction == CanvasUtils::ImageExtraction::Randomize ||
 +            extraction == CanvasUtils::ImageExtraction::EfficientRandomize) {
          const auto pii = webgl::PackingInfoInfo::For(desc.pi);
          // DoReadPixels() requres pii to be Some().
