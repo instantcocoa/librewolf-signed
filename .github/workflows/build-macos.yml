@@ -262,6 +262,10 @@ jobs:
           tar xf librewolf-*.source.tar.gz
           ls -la "$SOURCE_DIR/"
 
+      - name: Install x86_64 Rust target for cross-compilation
+        run: |
+          rustup target add x86_64-apple-darwin
+
       - name: Configure mozconfig for x86_64
         run: |
           cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
