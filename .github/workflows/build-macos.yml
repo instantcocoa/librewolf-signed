@@ -15,6 +15,16 @@ name: Build macOS (Universal)
 #   APP_STORE_CONNECT_KEY_ID   - Key ID from App Store Connect API Keys page
 #
 #   APP_STORE_CONNECT_ISSUER_ID - Issuer ID from App Store Connect API Keys page
+#
+#   SCCACHE_BUCKET             - S3 bucket name for sccache (e.g. "librewolf-sccache")
+#   AWS_ACCESS_KEY_ID          - AWS credentials for sccache S3 bucket
+#   AWS_SECRET_ACCESS_KEY      - AWS credentials for sccache S3 bucket
+#
+# Optional:
+#   SCCACHE_REGION             - S3 region (defaults to us-east-1)
+# =============================================================================
+#
+# macOS builds run on Depot.dev runners (project: librewolf)
 # =============================================================================
 
 on:
@@ -41,9 +51,7 @@ on:
       - main
 
 env:
-  # Shared across jobs via artifacts, but set here for reference
-  LW_VERSION: ""
-  LW_RELEASE: ""
+  SCCACHE_GHA_ENABLED: "false"
 
 jobs:
   # ===========================================================================
@@ -83,7 +91,15 @@ jobs:
           echo "RELEASE=$(cat release)" >> "$GITHUB_OUTPUT"
           echo "SOURCE_DIR=librewolf-$(cat version)-$(cat release)" >> "$GITHUB_OUTPUT"
 
+      - name: Cache source tarball
+        id: cache-source
+        uses: actions/cache@v4
+        with:
+          path: librewolf-*.source.tar.gz
+          key: librewolf-source-${{ steps.version.outputs.VERSION }}-${{ steps.version.outputs.RELEASE }}
+
       - name: Build source tarball
+        if: steps.cache-source.outputs.cache-hit != 'true'
         run: make all
 
       - name: Upload source tarball
@@ -98,21 +114,33 @@ jobs:
   # ===========================================================================
   build-arm64:
     needs: prepare-source
-    runs-on: macos-14
+    runs-on: depot-macos-14
     env:
       SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
       LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
+      SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
+      SCCACHE_CACHE_SIZE: "20G"
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
 
-      - name: Free disk space
+- name: Install sccache
         run: |
-          # GitHub macos runners have limited disk space; free what we can
-          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
-          sudo rm -rf ~/Library/Developer/CoreSimulator || true
-          df -h /
+          brew install sccache
+          sccache --version
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
+      - name: Cache bootstrap toolchains
+        uses: actions/cache@v4
+        with:
+          path: ~/.mozbuild
+          key: mozbuild-arm64-${{ needs.prepare-source.outputs.version }}
+          restore-keys: |
+            mozbuild-arm64-
 
       - name: Download source tarball
         uses: actions/download-artifact@v4
@@ -128,6 +156,7 @@ jobs:
         run: |
           cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
           echo 'ac_add_options --target=aarch64-apple-darwin' >> "$SOURCE_DIR/mozconfig"
+          echo 'ac_add_options --with-ccache=sccache' >> "$SOURCE_DIR/mozconfig"
           echo "--- mozconfig ---"
           cat "$SOURCE_DIR/mozconfig"
 
@@ -140,6 +169,10 @@ jobs:
         run: |
           cd "$SOURCE_DIR"
           ./mach build
+
+      - name: Print sccache stats
+        if: always()
+        run: sccache --show-stats
 
       - name: Package
         run: |
@@ -164,24 +197,38 @@ jobs:
           retention-days: 1
 
   # ===========================================================================
-  # Job 3: Build x86_64 (Intel) on macos-13
+  # Job 3: Build x86_64 (Intel) — cross-compiled on macos-14 (ARM)
+  # Note: macos-13 (Intel) runners are deprecated by GitHub.
   # ===========================================================================
   build-x86_64:
     needs: prepare-source
-    runs-on: macos-13
+    runs-on: depot-macos-14
     env:
       SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
       LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
+      SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
+      SCCACHE_CACHE_SIZE: "20G"
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
 
-      - name: Free disk space
+- name: Install sccache
         run: |
-          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
-          sudo rm -rf ~/Library/Developer/CoreSimulator || true
-          df -h /
+          brew install sccache
+          sccache --version
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
+      - name: Cache bootstrap toolchains
+        uses: actions/cache@v4
+        with:
+          path: ~/.mozbuild
+          key: mozbuild-x86_64-${{ needs.prepare-source.outputs.version }}
+          restore-keys: |
+            mozbuild-x86_64-
 
       - name: Download source tarball
         uses: actions/download-artifact@v4
@@ -197,6 +244,7 @@ jobs:
         run: |
           cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
           echo 'ac_add_options --target=x86_64-apple-darwin' >> "$SOURCE_DIR/mozconfig"
+          echo 'ac_add_options --with-ccache=sccache' >> "$SOURCE_DIR/mozconfig"
           echo "--- mozconfig ---"
           cat "$SOURCE_DIR/mozconfig"
 
@@ -209,6 +257,10 @@ jobs:
         run: |
           cd "$SOURCE_DIR"
           ./mach build
+
+      - name: Print sccache stats
+        if: always()
+        run: sccache --show-stats
 
       - name: Package
         run: |
@@ -237,7 +289,7 @@ jobs:
   # ===========================================================================
   universal-sign-notarize:
     needs: [prepare-source, build-arm64, build-x86_64]
-    runs-on: macos-14
+    runs-on: depot-macos-14
     env:
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
       LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
@@ -313,7 +365,7 @@ jobs:
       - name: Sign app bundle
         run: |
           chmod +x scripts/macos-sign.sh
-          ./scripts/macos-sign.sh LibreWolf.app "$SIGNING_IDENTITY"
+          ./scripts/macos-sign.sh LibreWolf.app "$SIGNING_IDENTITY" assets/entitlements.plist
 
       - name: Create DMG
         run: |

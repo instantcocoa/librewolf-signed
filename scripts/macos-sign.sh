@@ -6,19 +6,20 @@
 # Signs inner-to-outer (frameworks/dylibs first, main binary last)
 # with hardened runtime and secure timestamp (required for notarization).
 #
-# Usage: ./scripts/macos-sign.sh <path-to.app> <signing-identity>
+# Usage: ./scripts/macos-sign.sh <path-to.app> <signing-identity> <entitlements.plist>
 #
 # Example:
-#   ./scripts/macos-sign.sh LibreWolf.app "Developer ID Application: Your Name (TEAM_ID)"
+#   ./scripts/macos-sign.sh LibreWolf.app "Developer ID Application: ..." assets/entitlements.plist
 #
 
 set -euo pipefail
 
 APP_PATH="$1"
 IDENTITY="$2"
+ENTITLEMENTS="${3:-}"
 
 if [[ -z "$APP_PATH" || -z "$IDENTITY" ]]; then
-    echo "Usage: $0 <path-to.app> <signing-identity>"
+    echo "Usage: $0 <path-to.app> <signing-identity> [entitlements.plist]"
     exit 1
 fi
 
@@ -33,6 +34,11 @@ CODESIGN_FLAGS=(
     --timestamp
     --sign "$IDENTITY"
 )
+
+if [[ -n "$ENTITLEMENTS" ]]; then
+    CODESIGN_FLAGS+=(--entitlements "$ENTITLEMENTS")
+    echo "Using entitlements: $ENTITLEMENTS"
+fi
 
 echo "Signing $APP_PATH with identity: $IDENTITY"
 echo ""

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required for JavaScript JIT compilation -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <!-- Required for Firefox's unsigned in-memory code execution -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- Required for loading third-party dylibs (extensions, plugins) -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- Required for DYLD environment variable use in child processes -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+    <!-- Required for audio/video capture (WebRTC) -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.camera</key>
+    <true/>
+</dict>
+</plist>
