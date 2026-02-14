@@ -1,0 +1,388 @@
+name: Build macOS (Universal)
+
+# =============================================================================
+# Required GitHub Secrets (Settings > Secrets and variables > Actions):
+#
+#   APPLE_CERTIFICATE_P12      - Base64-encoded Developer ID Application .p12
+#                                Export from Keychain Access, then:
+#                                  base64 -i DeveloperIDApplication.p12 | pbcopy
+#
+#   APPLE_CERTIFICATE_PASSWORD - Password set when exporting the .p12
+#
+#   APP_STORE_CONNECT_KEY      - Base64-encoded App Store Connect API .p8 key
+#                                  base64 -i AuthKey_XXXXXX.p8 | pbcopy
+#
+#   APP_STORE_CONNECT_KEY_ID   - Key ID from App Store Connect API Keys page
+#
+#   APP_STORE_CONNECT_ISSUER_ID - Issuer ID from App Store Connect API Keys page
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_channel:
+        description: "Firefox version channel"
+        required: true
+        default: "stable"
+        type: choice
+        options:
+          - stable
+          - rc
+          - beta
+          - latest
+      skip_notarization:
+        description: "Skip notarization (faster, for testing)"
+        required: false
+        default: false
+        type: boolean
+
+  push:
+    branches:
+      - main
+
+env:
+  # Shared across jobs via artifacts, but set here for reference
+  LW_VERSION: ""
+  LW_RELEASE: ""
+
+jobs:
+  # ===========================================================================
+  # Job 1: Prepare source tarball on cheap Linux runner
+  # ===========================================================================
+  prepare-source:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      release: ${{ steps.version.outputs.RELEASE }}
+      source_dir: ${{ steps.version.outputs.SOURCE_DIR }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install python3 pigz gnupg wget unzip
+
+      - name: Detect Firefox version
+        if: inputs.version_channel && inputs.version_channel != 'stable'
+        id: detect
+        run: |
+          chmod +x ./scripts/detect-firefox-version.sh
+          ./scripts/detect-firefox-version.sh --channel "${{ inputs.version_channel }}" > /tmp/ff-version.env
+          cat /tmp/ff-version.env
+          source /tmp/ff-version.env
+          echo "$FF_VERSION" > version
+
+      - name: Set version outputs
+        id: version
+        run: |
+          echo "VERSION=$(cat version)" >> "$GITHUB_OUTPUT"
+          echo "RELEASE=$(cat release)" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_DIR=librewolf-$(cat version)-$(cat release)" >> "$GITHUB_OUTPUT"
+
+      - name: Build source tarball
+        run: make all
+
+      - name: Upload source tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: librewolf-source
+          path: librewolf-*.source.tar.gz
+          retention-days: 3
+
+  # ===========================================================================
+  # Job 2: Build arm64 (Apple Silicon) on macos-14
+  # ===========================================================================
+  build-arm64:
+    needs: prepare-source
+    runs-on: macos-14
+    env:
+      SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
+      LW_VERSION: ${{ needs.prepare-source.outputs.version }}
+      LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
+    steps:
+      - name: Checkout (for scripts/assets)
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          # GitHub macos runners have limited disk space; free what we can
+          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
+          sudo rm -rf ~/Library/Developer/CoreSimulator || true
+          df -h /
+
+      - name: Download source tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: librewolf-source
+
+      - name: Extract source
+        run: |
+          tar xf librewolf-*.source.tar.gz
+          ls -la "$SOURCE_DIR/"
+
+      - name: Configure mozconfig for arm64
+        run: |
+          cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
+          echo 'ac_add_options --target=aarch64-apple-darwin' >> "$SOURCE_DIR/mozconfig"
+          echo "--- mozconfig ---"
+          cat "$SOURCE_DIR/mozconfig"
+
+      - name: Bootstrap
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach --no-interactive bootstrap --application-choice=browser
+
+      - name: Build
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach build
+
+      - name: Package
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach package
+
+      - name: Extract .app from .dmg
+        run: |
+          DMG=$(find "$SOURCE_DIR/obj-"* -name "*.dmg" -path "*/dist/*" | head -1)
+          echo "Found DMG: $DMG"
+          hdiutil attach "$DMG" -mountpoint /tmp/lw-mount -nobrowse
+          mkdir -p arm64-app
+          cp -a /tmp/lw-mount/LibreWolf.app arm64-app/
+          hdiutil detach /tmp/lw-mount
+          tar czf librewolf-arm64-app.tar.gz -C arm64-app LibreWolf.app
+
+      - name: Upload arm64 .app
+        uses: actions/upload-artifact@v4
+        with:
+          name: librewolf-arm64-app
+          path: librewolf-arm64-app.tar.gz
+          retention-days: 1
+
+  # ===========================================================================
+  # Job 3: Build x86_64 (Intel) on macos-13
+  # ===========================================================================
+  build-x86_64:
+    needs: prepare-source
+    runs-on: macos-13
+    env:
+      SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
+      LW_VERSION: ${{ needs.prepare-source.outputs.version }}
+      LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
+    steps:
+      - name: Checkout (for scripts/assets)
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
+          sudo rm -rf ~/Library/Developer/CoreSimulator || true
+          df -h /
+
+      - name: Download source tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: librewolf-source
+
+      - name: Extract source
+        run: |
+          tar xf librewolf-*.source.tar.gz
+          ls -la "$SOURCE_DIR/"
+
+      - name: Configure mozconfig for x86_64
+        run: |
+          cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
+          echo 'ac_add_options --target=x86_64-apple-darwin' >> "$SOURCE_DIR/mozconfig"
+          echo "--- mozconfig ---"
+          cat "$SOURCE_DIR/mozconfig"
+
+      - name: Bootstrap
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach --no-interactive bootstrap --application-choice=browser
+
+      - name: Build
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach build
+
+      - name: Package
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach package
+
+      - name: Extract .app from .dmg
+        run: |
+          DMG=$(find "$SOURCE_DIR/obj-"* -name "*.dmg" -path "*/dist/*" | head -1)
+          echo "Found DMG: $DMG"
+          hdiutil attach "$DMG" -mountpoint /tmp/lw-mount -nobrowse
+          mkdir -p x86_64-app
+          cp -a /tmp/lw-mount/LibreWolf.app x86_64-app/
+          hdiutil detach /tmp/lw-mount
+          tar czf librewolf-x86_64-app.tar.gz -C x86_64-app LibreWolf.app
+
+      - name: Upload x86_64 .app
+        uses: actions/upload-artifact@v4
+        with:
+          name: librewolf-x86_64-app
+          path: librewolf-x86_64-app.tar.gz
+          retention-days: 1
+
+  # ===========================================================================
+  # Job 4: Merge into universal, sign, create DMG, notarize
+  # ===========================================================================
+  universal-sign-notarize:
+    needs: [prepare-source, build-arm64, build-x86_64]
+    runs-on: macos-14
+    env:
+      LW_VERSION: ${{ needs.prepare-source.outputs.version }}
+      LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
+    steps:
+      - name: Checkout (for scripts)
+        uses: actions/checkout@v4
+
+      - name: Download arm64 .app
+        uses: actions/download-artifact@v4
+        with:
+          name: librewolf-arm64-app
+
+      - name: Download x86_64 .app
+        uses: actions/download-artifact@v4
+        with:
+          name: librewolf-x86_64-app
+
+      - name: Extract both .app bundles
+        run: |
+          mkdir -p arm64-app x86_64-app
+          tar xzf librewolf-arm64-app.tar.gz -C arm64-app
+          tar xzf librewolf-x86_64-app.tar.gz -C x86_64-app
+          echo "arm64:"
+          file arm64-app/LibreWolf.app/Contents/MacOS/librewolf
+          echo "x86_64:"
+          file x86_64-app/LibreWolf.app/Contents/MacOS/librewolf
+
+      - name: Create universal binary
+        run: |
+          chmod +x scripts/macos-create-universal.sh
+          ./scripts/macos-create-universal.sh \
+            arm64-app/LibreWolf.app \
+            x86_64-app/LibreWolf.app \
+            LibreWolf.app
+
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+          # Find the signing identity
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          echo "Found identity: $IDENTITY"
+          echo "SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Sign app bundle
+        run: |
+          chmod +x scripts/macos-sign.sh
+          ./scripts/macos-sign.sh LibreWolf.app "$SIGNING_IDENTITY"
+
+      - name: Create DMG
+        run: |
+          DMG_NAME="librewolf-${LW_VERSION}-${LW_RELEASE}-macos-universal.dmg"
+          DMG_TEMP="$RUNNER_TEMP/dmg-staging"
+
+          mkdir -p "$DMG_TEMP"
+          cp -a LibreWolf.app "$DMG_TEMP/"
+          ln -s /Applications "$DMG_TEMP/Applications"
+
+          hdiutil create \
+            -volname "LibreWolf" \
+            -srcfolder "$DMG_TEMP" \
+            -ov \
+            -format UDZO \
+            "$DMG_NAME"
+
+          # Sign the DMG itself
+          codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG_NAME"
+
+          echo "DMG_NAME=$DMG_NAME" >> "$GITHUB_ENV"
+          ls -lh "$DMG_NAME"
+
+      - name: Notarize DMG
+        if: ${{ !inputs.skip_notarization }}
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          # Write the API key to a file for notarytool
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          echo "$APP_STORE_CONNECT_KEY" | base64 --decode > "$API_KEY_PATH"
+
+          echo "Submitting $DMG_NAME for notarization..."
+          xcrun notarytool submit "$DMG_NAME" \
+            --key "$API_KEY_PATH" \
+            --key-id "$APP_STORE_CONNECT_KEY_ID" \
+            --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
+            --wait \
+            --timeout 30m
+
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$DMG_NAME"
+
+          echo "Verifying notarization..."
+          spctl --assess --type open --context context:primary-signature -v "$DMG_NAME"
+
+          rm -f "$API_KEY_PATH"
+
+      - name: Generate checksums
+        run: |
+          shasum -a 256 "$DMG_NAME" > "${DMG_NAME}.sha256sum"
+          shasum -a 512 "$DMG_NAME" > "${DMG_NAME}.sha512sum"
+          cat "${DMG_NAME}.sha256sum"
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: librewolf-macos-universal
+          path: |
+            librewolf-*-macos-universal.dmg
+            librewolf-*-macos-universal.dmg.sha256sum
+            librewolf-*-macos-universal.dmg.sha512sum
+          retention-days: 14
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          if [[ -n "${KEYCHAIN_PATH:-}" ]]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
