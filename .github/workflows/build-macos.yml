@@ -128,7 +128,7 @@ jobs:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
 
-- name: Install sccache
+      - name: Install sccache
         run: |
           brew install sccache
           sccache --version
@@ -216,7 +216,7 @@ jobs:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
 
-- name: Install sccache
+      - name: Install sccache
         run: |
           brew install sccache
           sccache --version
