@@ -114,7 +114,7 @@ jobs:
   # ===========================================================================
   build-arm64:
     needs: prepare-source
-    runs-on: depot-macos-latest
+    runs-on: macos-15
     permissions:
       contents: read
       id-token: write
@@ -130,6 +130,12 @@ jobs:
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
+          sudo rm -rf ~/Library/Developer/CoreSimulator || true
+          df -h /
 
       - name: Install sccache
         run: |
@@ -205,7 +211,7 @@ jobs:
   # ===========================================================================
   build-x86_64:
     needs: prepare-source
-    runs-on: depot-macos-latest
+    runs-on: macos-15
     permissions:
       contents: read
       id-token: write
@@ -221,6 +227,12 @@ jobs:
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
+          sudo rm -rf ~/Library/Developer/CoreSimulator || true
+          df -h /
 
       - name: Install sccache
         run: |
@@ -295,7 +307,7 @@ jobs:
   # ===========================================================================
   universal-sign-notarize:
     needs: [prepare-source, build-arm64, build-x86_64]
-    runs-on: depot-macos-latest
+    runs-on: macos-15
     permissions:
       contents: read
       id-token: write
