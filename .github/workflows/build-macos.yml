@@ -115,6 +115,9 @@ jobs:
   build-arm64:
     needs: prepare-source
     runs-on: depot-macos-14
+    permissions:
+      contents: read
+      id-token: write
     env:
       SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
@@ -203,6 +206,9 @@ jobs:
   build-x86_64:
     needs: prepare-source
     runs-on: depot-macos-14
+    permissions:
+      contents: read
+      id-token: write
     env:
       SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
@@ -290,6 +296,9 @@ jobs:
   universal-sign-notarize:
     needs: [prepare-source, build-arm64, build-x86_64]
     runs-on: depot-macos-14
+    permissions:
+      contents: read
+      id-token: write
     env:
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
       LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
