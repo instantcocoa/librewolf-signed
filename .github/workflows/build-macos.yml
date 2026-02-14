@@ -172,7 +172,11 @@ jobs:
       - name: Bootstrap
         run: |
           cd "$SOURCE_DIR"
-          ./mach --no-interactive bootstrap --application-choice=browser
+          # The bootstrap may fail on unpack-sdk.py (403 from taskcluster)
+          # but this is non-fatal — the macOS runner already has Xcode SDK.
+          ./mach --no-interactive bootstrap --application-choice=browser || true
+          # Verify essential toolchains were downloaded
+          test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
 
       - name: Build
         run: |
@@ -269,7 +273,11 @@ jobs:
       - name: Bootstrap
         run: |
           cd "$SOURCE_DIR"
-          ./mach --no-interactive bootstrap --application-choice=browser
+          # The bootstrap may fail on unpack-sdk.py (403 from taskcluster)
+          # but this is non-fatal — the macOS runner already has Xcode SDK.
+          ./mach --no-interactive bootstrap --application-choice=browser || true
+          # Verify essential toolchains were downloaded
+          test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
 
       - name: Build
         run: |
