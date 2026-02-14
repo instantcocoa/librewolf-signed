@@ -20,6 +20,10 @@ ac_add_options --with-l10n-base=$PWD/lw/l10n
 
 ac_add_options --enable-bootstrap
 
+# Point to the Xcode SDK on the runner — avoids taskcluster download
+export MACOS_SDK_DIR=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+ac_add_options --with-macos-sdk=$MACOS_SDK_DIR
+
 export MOZ_REQUIRE_SIGNING=
 
 mk_add_options MOZ_CRASHREPORTER=0
