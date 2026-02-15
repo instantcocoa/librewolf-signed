@@ -44,39 +44,48 @@ echo ""
 echo "==> Stripping extended attributes..."
 xattr -cr "$APP_PATH"
 
-# Step 1: Sign all Mach-O files that are NOT bundle executables.
-# When codesign encounters a bundle's main executable, it tries to validate
-# the entire bundle (including subcomponents not yet signed), so we must
-# skip those and let them be signed as part of their bundle in later steps.
+# Build a list of bundle executable paths to skip in step 1.
+# When codesign is given a bundle's CFBundleExecutable, it validates the
+# entire bundle (including subcomponents not yet signed), causing failures.
+# These executables get signed when their parent bundle is signed in later steps.
+echo "==> Identifying bundle executables to defer..."
+SKIP_PATHS=()
+while IFS= read -r -d '' plist; do
+    bundle_dir="$(dirname "$(dirname "$plist")")"
+    exe_name=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$plist" 2>/dev/null || true)
+    if [[ -n "$exe_name" ]]; then
+        exe_path="$bundle_dir/Contents/MacOS/$exe_name"
+        if [[ -f "$exe_path" ]]; then
+            SKIP_PATHS+=("$exe_path")
+            echo "  Will defer: ${exe_path#"$APP_PATH"/}"
+        fi
+    fi
+done < <(find "$APP_PATH" -name "Info.plist" -path "*/Contents/Info.plist" -print0)
+
+# Step 1: Sign all Mach-O files except bundle executables.
+echo ""
 echo "==> Signing Mach-O binaries..."
-sign_count=0
-skip_count=0
 find "$APP_PATH" -type f | while read -r f; do
     if ! file "$f" | grep -q "Mach-O"; then
         continue
     fi
 
-    rel="${f#"$APP_PATH"/}"
-
-    # Skip bundle executables — they'll be signed when their bundle is signed.
-    # A bundle executable lives at <Name>.app/Contents/MacOS/<something>.
-    # Signing it directly makes codesign validate the whole bundle prematurely.
-    if [[ "$f" == *".app/Contents/MacOS/"* ]] && [[ "$rel" != *"/"*"/"*"/"*"/"* || "$f" == *".app/Contents/MacOS/"*".app/"* ]]; then
-        # Check: is this file directly inside a .app/Contents/MacOS/ (not deeper)?
-        # Get the path after the last .app/Contents/MacOS/
-        after_macos="${f##*.app/Contents/MacOS/}"
-        if [[ "$after_macos" != *"/"* ]]; then
-            echo "  Skipping bundle executable: $rel (will sign with bundle)"
-            skip_count=$((skip_count + 1))
-            continue
+    # Check if this file is a bundle executable we should skip
+    skip=false
+    for skip_path in "${SKIP_PATHS[@]}"; do
+        if [[ "$f" == "$skip_path" ]]; then
+            skip=true
+            break
         fi
+    done
+
+    if $skip; then
+        continue
     fi
 
-    echo "  Signing: $rel"
+    echo "  Signing: ${f#"$APP_PATH"/}"
     codesign "${CODESIGN_FLAGS[@]}" "$f"
-    sign_count=$((sign_count + 1))
 done
-echo "  Signed $sign_count files, skipped $skip_count bundle executables"
 
 # Step 2: Sign all frameworks
 echo ""
@@ -89,7 +98,6 @@ done
 # Step 3: Sign helper apps and XPC services (innermost first)
 echo ""
 echo "==> Signing helper apps and XPC services..."
-# Sort by depth (deepest first) so nested bundles are signed before their parents
 find "$APP_PATH" \( -name "*.app" -o -name "*.xpc" \) -type d -not -path "$APP_PATH" | \
     awk '{print gsub(/\//,"/"), $0}' | sort -rn | cut -d' ' -f2- | while read -r helper; do
     echo "  Signing: ${helper#"$APP_PATH"/}"
