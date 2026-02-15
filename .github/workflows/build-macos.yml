@@ -47,6 +47,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: build-macos-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   SCCACHE_GHA_ENABLED: "false"
 
