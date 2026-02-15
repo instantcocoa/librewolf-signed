@@ -1,0 +1,82 @@
+name: Check for upstream releases
+
+on:
+  schedule:
+    # Check every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT_VERSION="$(cat version)-$(cat release)"
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Check upstream latest release
+        id: upstream
+        run: |
+          LATEST=$(curl -sf https://codeberg.org/api/v1/repos/librewolf/source/releases/latest | jq -r '.tag_name')
+          echo "upstream=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Upstream version: $LATEST"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          if [[ "${{ steps.current.outputs.version }}" == "${{ steps.upstream.outputs.upstream }}" ]]; then
+            echo "Already up to date."
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New upstream release detected: ${{ steps.upstream.outputs.upstream }}"
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync from upstream
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add upstream remote
+          git remote add upstream https://codeberg.org/librewolf/source.git
+
+          # Fetch the upstream tag
+          UPSTREAM_TAG="${{ steps.upstream.outputs.upstream }}"
+          git fetch upstream "refs/tags/${UPSTREAM_TAG}:refs/tags/upstream-${UPSTREAM_TAG}" --depth=1
+          git fetch upstream main --depth=50
+
+          # Merge upstream changes, keeping our custom files on conflict
+          # Our custom files (.github/, scripts/macos-*, assets/entitlements.plist, etc.)
+          # don't exist upstream, so there should be no conflicts.
+          git merge upstream/main \
+            --no-edit \
+            -m "Sync upstream LibreWolf ${UPSTREAM_TAG}" \
+            --strategy-option theirs \
+          || {
+            echo "Merge conflict detected. Attempting to resolve..."
+            # Accept upstream for version/release/patches/settings, keep ours for CI files
+            git checkout --theirs version release settings patches/ l10n/ themes/ assets/mozconfig* scripts/librewolf-patches.py Makefile 2>/dev/null || true
+            git checkout --ours .github/ scripts/macos-*.sh assets/entitlements.plist assets/mozconfig.macos 2>/dev/null || true
+            git add -A
+            git commit --no-edit -m "Sync upstream LibreWolf ${UPSTREAM_TAG} (resolved conflicts)"
+          }
+
+          echo "Merged upstream ${UPSTREAM_TAG}"
+
+      - name: Push changes
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          git push origin main
+          echo "Pushed. This will trigger the build workflow."
