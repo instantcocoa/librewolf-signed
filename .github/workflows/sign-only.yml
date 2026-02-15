@@ -10,24 +10,55 @@ on:
         description: "Run ID from a previous successful build (has librewolf-arm64-app and librewolf-x86_64-app artifacts)"
         required: true
         type: string
+      version:
+        description: "LibreWolf version (e.g. 147.0.3) — leave blank to read from repo"
+        required: false
+        type: string
+      release_num:
+        description: "LibreWolf release number (e.g. 2) — leave blank to read from repo"
+        required: false
+        type: string
       skip_notarization:
         description: "Skip notarization (faster, for testing)"
+        required: false
+        default: false
+        type: boolean
+      create_release:
+        description: "Create GitHub Release and update Homebrew cask"
         required: false
         default: false
         type: boolean
 
 jobs:
   sign:
-    runs-on: macos-26
+    runs-on: macos-15
+    timeout-minutes: 60
     permissions:
       contents: write
       actions: read
-    env:
-      LW_VERSION: "147.0.3"
-      LW_RELEASE: "2"
     steps:
-      - name: Checkout (for scripts/assets)
+      - name: Checkout (for scripts/assets and version files)
         uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=$(cat version)" >> "$GITHUB_ENV"
+          fi
+
+          if [[ -n "${{ inputs.release_num }}" ]]; then
+            echo "RELEASE=${{ inputs.release_num }}" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE=$(cat release)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Print version info
+        run: |
+          echo "LibreWolf version: $VERSION"
+          echo "LibreWolf release: $RELEASE"
 
       - name: Download arm64 .app
         uses: actions/download-artifact@v4
@@ -99,7 +130,7 @@ jobs:
 
       - name: Create DMG
         run: |
-          DMG_NAME="librewolf-${LW_VERSION}-${LW_RELEASE}-macos-universal.dmg"
+          DMG_NAME="librewolf-${VERSION}-${RELEASE}-macos-universal.dmg"
           DMG_TEMP="$RUNNER_TEMP/dmg-staging"
 
           mkdir -p "$DMG_TEMP"
@@ -159,6 +190,62 @@ jobs:
             librewolf-*-macos-universal.dmg.sha256sum
             librewolf-*-macos-universal.dmg.sha512sum
           retention-days: 14
+
+      - name: Create GitHub Release
+        if: ${{ inputs.create_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${VERSION}-${RELEASE}"
+          TITLE="LibreWolf ${VERSION}-${RELEASE} (macOS Universal)"
+          SHA256=$(cat "${DMG_NAME}.sha256sum" | awk '{print $1}')
+
+          cat > /tmp/release-notes.md <<NOTES
+          ## LibreWolf ${VERSION}-${RELEASE} for macOS
+
+          **Universal binary** (arm64 + x86_64) — works on both Apple Silicon and Intel Macs.
+
+          Signed with Developer ID and notarized by Apple.
+
+          ### Install via Homebrew
+          \`\`\`bash
+          brew tap instantcocoa/tap
+          brew install --cask librewolf-signed
+          \`\`\`
+
+          ### Checksums (SHA-256)
+          \`\`\`
+          ${SHA256}  ${DMG_NAME}
+          \`\`\`
+          NOTES
+
+          gh release create "$TAG" \
+            --title "$TITLE" \
+            --notes-file /tmp/release-notes.md \
+            --latest \
+            "$DMG_NAME" \
+            "${DMG_NAME}.sha256sum" \
+            "${DMG_NAME}.sha512sum" \
+          || gh release upload "$TAG" \
+            "$DMG_NAME" \
+            "${DMG_NAME}.sha256sum" \
+            "${DMG_NAME}.sha512sum" \
+            --clobber
+
+      - name: Update Homebrew cask
+        if: ${{ inputs.create_release && success() }}
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          CASK_VERSION="${VERSION}-${RELEASE}"
+          SHA256=$(cat "${DMG_NAME}.sha256sum" | awk '{print $1}')
+
+          gh api repos/instantcocoa/homebrew-tap/dispatches \
+            -f event_type=update-cask \
+            -f "client_payload[version]=$CASK_VERSION" \
+            -f "client_payload[sha256]=$SHA256"
+
+          echo "Dispatched homebrew cask update: version=$CASK_VERSION sha256=$SHA256"
 
       - name: Cleanup keychain
         if: always()

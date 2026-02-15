@@ -46,6 +46,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'version'
+      - 'release'
+      - 'patches/**'
+      - 'assets/**'
+      - 'themes/**'
+      - 'settings/**'
+      - 'scripts/**'
+      - 'Makefile'
+      - '.github/workflows/build-macos.yml'
 
 concurrency:
   group: build-macos-${{ github.ref }}
@@ -60,6 +70,7 @@ jobs:
   # ===========================================================================
   prepare-source:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       release: ${{ steps.version.outputs.RELEASE }}
@@ -92,23 +103,23 @@ jobs:
           echo "RELEASE=$(cat release)" >> "$GITHUB_OUTPUT"
           echo "SOURCE_DIR=librewolf-$(cat version)-$(cat release)" >> "$GITHUB_OUTPUT"
 
-      - name: Cache source tarball
-        id: cache-source
-        uses: actions/cache@v4
-        with:
-          path: librewolf-*.source.tar.gz
-          key: librewolf-source-${{ steps.version.outputs.VERSION }}-${{ steps.version.outputs.RELEASE }}
-
       - name: Build source tarball
-        if: steps.cache-source.outputs.cache-hit != 'true'
         run: make all
 
+      - name: Upload source tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: librewolf-source
+          path: librewolf-*.source.tar.gz
+          retention-days: 1
+
   # ===========================================================================
-  # Job 2: Build arm64 (Apple Silicon) on macos-14
+  # Job 2: Build arm64 (Apple Silicon)
   # ===========================================================================
   build-arm64:
     needs: prepare-source
-    runs-on: macos-26
+    runs-on: macos-15
+    timeout-minutes: 240
     permissions:
       contents: read
       id-token: write
@@ -145,12 +156,10 @@ jobs:
           restore-keys: |
             mozbuild-arm64-
 
-      - name: Restore source tarball from cache
-        uses: actions/cache/restore@v4
+      - name: Download source tarball
+        uses: actions/download-artifact@v4
         with:
-          path: librewolf-*.source.tar.gz
-          key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
-          fail-on-cache-miss: true
+          name: librewolf-source
 
       - name: Extract source
         run: |
@@ -206,12 +215,12 @@ jobs:
           retention-days: 1
 
   # ===========================================================================
-  # Job 3: Build x86_64 (Intel) — cross-compiled on macos-14 (ARM)
-  # Note: macos-13 (Intel) runners are deprecated by GitHub.
+  # Job 3: Build x86_64 (Intel) — cross-compiled on ARM runner
   # ===========================================================================
   build-x86_64:
     needs: prepare-source
-    runs-on: macos-26
+    runs-on: macos-15
+    timeout-minutes: 240
     permissions:
       contents: read
       id-token: write
@@ -248,12 +257,10 @@ jobs:
           restore-keys: |
             mozbuild-x86_64-
 
-      - name: Restore source tarball from cache
-        uses: actions/cache/restore@v4
+      - name: Download source tarball
+        uses: actions/download-artifact@v4
         with:
-          path: librewolf-*.source.tar.gz
-          key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
-          fail-on-cache-miss: true
+          name: librewolf-source
 
       - name: Extract source
         run: |
@@ -317,7 +324,8 @@ jobs:
   # ===========================================================================
   universal-sign-notarize:
     needs: [prepare-source, build-arm64, build-x86_64]
-    runs-on: macos-26
+    runs-on: macos-15
+    timeout-minutes: 60
     permissions:
       contents: write
       id-token: write
