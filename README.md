@@ -1,3 +1,18 @@
+# LibreWolf (Signed macOS Build)
+
+## Install via Homebrew
+
+```bash
+brew tap instantcocoa/tap
+brew install --cask librewolf-signed
+```
+
+This repo builds a **signed and notarized** macOS universal binary (arm64 + x86_64) from the [upstream LibreWolf source](https://codeberg.org/librewolf/source). New upstream releases are detected automatically and built within 6 hours.
+
+You can also download the DMG directly from [Releases](https://github.com/instantcocoa/librewolf-signed/releases).
+
+---
+
 # LibreWolf Source Repository
 
 This repository contains all the patches and theming that make up LibreWolf, as well as scripts and a Makefile to build LibreWolf. There also is the [Settings repository](https://codeberg.org/librewolf/settings), which contains the LibreWolf preferences.
