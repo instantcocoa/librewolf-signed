@@ -43,6 +43,11 @@ fi
 echo "Signing $APP_PATH with identity: $IDENTITY"
 echo ""
 
+# Step 0: Strip extended attributes (resource forks, Finder info, etc.)
+# These cause "resource fork, Finder information, or similar detritus not allowed" errors
+echo "==> Stripping extended attributes..."
+xattr -cr "$APP_PATH"
+
 # Step 1: Sign all dylibs and .so files (innermost first)
 echo "==> Signing shared libraries..."
 find "$APP_PATH" \( -name "*.dylib" -o -name "*.so" \) -type f | while read -r lib; do
