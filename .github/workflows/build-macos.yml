@@ -469,20 +469,31 @@ jobs:
         run: |
           TAG="v${LW_VERSION}-${LW_RELEASE}"
           TITLE="LibreWolf ${LW_VERSION}-${LW_RELEASE} (macOS Universal)"
+          SHA256=$(cat "${DMG_NAME}.sha256sum" | awk '{print $1}')
 
-          # Create the release (or update if tag already exists)
-          gh release create "$TAG" \
-            --title "$TITLE" \
-            --notes "## LibreWolf ${LW_VERSION}-${LW_RELEASE} for macOS
+          cat > /tmp/release-notes.md <<NOTES
+          ## LibreWolf ${LW_VERSION}-${LW_RELEASE} for macOS
 
           **Universal binary** (arm64 + x86_64) — works on both Apple Silicon and Intel Macs.
 
           Signed with Developer ID and notarized by Apple.
 
+          ### Install via Homebrew
+          \`\`\`bash
+          brew tap instantcocoa/tap
+          brew install --cask librewolf-signed
+          \`\`\`
+
           ### Checksums (SHA-256)
           \`\`\`
-          $(cat "${DMG_NAME}.sha256sum")
-          \`\`\`" \
+          ${SHA256}  ${DMG_NAME}
+          \`\`\`
+          NOTES
+
+          # Create the release (or update if tag already exists)
+          gh release create "$TAG" \
+            --title "$TITLE" \
+            --notes-file /tmp/release-notes.md \
             --latest \
             "$DMG_NAME" \
             "${DMG_NAME}.sha256sum" \
@@ -492,6 +503,22 @@ jobs:
             "${DMG_NAME}.sha256sum" \
             "${DMG_NAME}.sha512sum" \
             --clobber
+
+      - name: Update Homebrew cask
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${LW_VERSION}-${LW_RELEASE}"
+          SHA256=$(cat "${DMG_NAME}.sha256sum" | awk '{print $1}')
+
+          # Trigger the update-cask workflow in the homebrew-tap repo
+          gh api repos/instantcocoa/homebrew-tap/dispatches \
+            -f event_type=update-cask \
+            -f "client_payload[version]=$VERSION" \
+            -f "client_payload[sha256]=$SHA256"
+
+          echo "Dispatched homebrew cask update: version=$VERSION sha256=$SHA256"
 
       - name: Cleanup keychain
         if: always()
