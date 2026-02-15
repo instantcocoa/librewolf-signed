@@ -50,9 +50,7 @@ xattr -cr "$APP_PATH"
 # We use `file` to detect Mach-O files rather than relying on extensions,
 # since some binaries (e.g. XUL) have no extension at all.
 echo "==> Signing all Mach-O binaries..."
-find "$APP_PATH" -type f -not -path "*/plugin-container.app/*" \
-    -not -path "*/gpu-helper.app/*" -not -path "*/media-plugin-helper.app/*" | while read -r f; do
-    # Skip non-Mach-O files quickly
+find "$APP_PATH" -type f | while read -r f; do
     if file "$f" | grep -q "Mach-O"; then
         echo "  Signing: ${f#"$APP_PATH"/}"
         codesign "${CODESIGN_FLAGS[@]}" "$f"
