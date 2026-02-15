@@ -23,9 +23,6 @@ name: Build macOS (Universal)
 # Optional:
 #   SCCACHE_REGION             - S3 region (defaults to us-east-1)
 # =============================================================================
-#
-# macOS builds run on Depot.dev runners (project: librewolf)
-# =============================================================================
 
 on:
   workflow_dispatch:
@@ -102,13 +99,6 @@ jobs:
         if: steps.cache-source.outputs.cache-hit != 'true'
         run: make all
 
-      - name: Upload source tarball
-        uses: actions/upload-artifact@v4
-        with:
-          name: librewolf-source
-          path: librewolf-*.source.tar.gz
-          retention-days: 3
-
   # ===========================================================================
   # Job 2: Build arm64 (Apple Silicon) on macos-14
   # ===========================================================================
@@ -151,10 +141,12 @@ jobs:
           restore-keys: |
             mozbuild-arm64-
 
-      - name: Download source tarball
-        uses: actions/download-artifact@v4
+      - name: Restore source tarball from cache
+        uses: actions/cache/restore@v4
         with:
-          name: librewolf-source
+          path: librewolf-*.source.tar.gz
+          key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
+          fail-on-cache-miss: true
 
       - name: Extract source
         run: |
@@ -252,10 +244,12 @@ jobs:
           restore-keys: |
             mozbuild-x86_64-
 
-      - name: Download source tarball
-        uses: actions/download-artifact@v4
+      - name: Restore source tarball from cache
+        uses: actions/cache/restore@v4
         with:
-          name: librewolf-source
+          path: librewolf-*.source.tar.gz
+          key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
+          fail-on-cache-miss: true
 
       - name: Extract source
         run: |
@@ -321,7 +315,7 @@ jobs:
     needs: [prepare-source, build-arm64, build-x86_64]
     runs-on: macos-26
     permissions:
-      contents: read
+      contents: write
       id-token: write
     env:
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
@@ -464,6 +458,36 @@ jobs:
             librewolf-*-macos-universal.dmg.sha256sum
             librewolf-*-macos-universal.dmg.sha512sum
           retention-days: 14
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${LW_VERSION}-${LW_RELEASE}"
+          TITLE="LibreWolf ${LW_VERSION}-${LW_RELEASE} (macOS Universal)"
+
+          # Create the release (or update if tag already exists)
+          gh release create "$TAG" \
+            --title "$TITLE" \
+            --notes "## LibreWolf ${LW_VERSION}-${LW_RELEASE} for macOS
+
+          **Universal binary** (arm64 + x86_64) — works on both Apple Silicon and Intel Macs.
+
+          Signed with Developer ID and notarized by Apple.
+
+          ### Checksums (SHA-256)
+          \`\`\`
+          $(cat "${DMG_NAME}.sha256sum")
+          \`\`\`" \
+            --latest \
+            "$DMG_NAME" \
+            "${DMG_NAME}.sha256sum" \
+            "${DMG_NAME}.sha512sum" \
+          || gh release upload "$TAG" \
+            "$DMG_NAME" \
+            "${DMG_NAME}.sha256sum" \
+            "${DMG_NAME}.sha512sum" \
+            --clobber
 
       - name: Cleanup keychain
         if: always()
