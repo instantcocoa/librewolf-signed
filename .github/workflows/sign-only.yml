@@ -1,0 +1,168 @@
+name: Sign Only (re-sign from previous build)
+
+# Use this to iterate on signing/notarization without rebuilding.
+# Downloads .app artifacts from a previous successful build run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run ID from a previous successful build (has librewolf-arm64-app and librewolf-x86_64-app artifacts)"
+        required: true
+        type: string
+      skip_notarization:
+        description: "Skip notarization (faster, for testing)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sign:
+    runs-on: macos-26
+    permissions:
+      contents: write
+      actions: read
+    env:
+      LW_VERSION: "147.0.3"
+      LW_RELEASE: "2"
+    steps:
+      - name: Checkout (for scripts/assets)
+        uses: actions/checkout@v4
+
+      - name: Download arm64 .app
+        uses: actions/download-artifact@v4
+        with:
+          name: librewolf-arm64-app
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download x86_64 .app
+        uses: actions/download-artifact@v4
+        with:
+          name: librewolf-x86_64-app
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract both .app bundles
+        run: |
+          mkdir -p arm64-app x86_64-app
+          tar xzf librewolf-arm64-app.tar.gz -C arm64-app
+          tar xzf librewolf-x86_64-app.tar.gz -C x86_64-app
+          echo "arm64:"
+          file arm64-app/LibreWolf.app/Contents/MacOS/librewolf
+          echo "x86_64:"
+          file x86_64-app/LibreWolf.app/Contents/MacOS/librewolf
+
+      - name: Create universal binary
+        run: |
+          chmod +x scripts/macos-create-universal.sh
+          ./scripts/macos-create-universal.sh \
+            arm64-app/LibreWolf.app \
+            x86_64-app/LibreWolf.app \
+            LibreWolf.app
+
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          echo "Found identity: $IDENTITY"
+          echo "SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Sign app bundle
+        run: |
+          chmod +x scripts/macos-sign.sh
+          ./scripts/macos-sign.sh LibreWolf.app "$SIGNING_IDENTITY" assets/entitlements.plist
+
+      - name: Create DMG
+        run: |
+          DMG_NAME="librewolf-${LW_VERSION}-${LW_RELEASE}-macos-universal.dmg"
+          DMG_TEMP="$RUNNER_TEMP/dmg-staging"
+
+          mkdir -p "$DMG_TEMP"
+          cp -a LibreWolf.app "$DMG_TEMP/"
+          ln -s /Applications "$DMG_TEMP/Applications"
+
+          hdiutil create \
+            -volname "LibreWolf" \
+            -srcfolder "$DMG_TEMP" \
+            -ov \
+            -format UDZO \
+            "$DMG_NAME"
+
+          codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG_NAME"
+
+          echo "DMG_NAME=$DMG_NAME" >> "$GITHUB_ENV"
+          ls -lh "$DMG_NAME"
+
+      - name: Notarize DMG
+        if: ${{ !inputs.skip_notarization }}
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          echo "$APP_STORE_CONNECT_KEY" | base64 --decode > "$API_KEY_PATH"
+
+          echo "Submitting $DMG_NAME for notarization..."
+          xcrun notarytool submit "$DMG_NAME" \
+            --key "$API_KEY_PATH" \
+            --key-id "$APP_STORE_CONNECT_KEY_ID" \
+            --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
+            --wait \
+            --timeout 30m
+
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$DMG_NAME"
+
+          echo "Verifying notarization..."
+          spctl --assess --type open --context context:primary-signature -v "$DMG_NAME"
+
+          rm -f "$API_KEY_PATH"
+
+      - name: Generate checksums
+        run: |
+          shasum -a 256 "$DMG_NAME" > "${DMG_NAME}.sha256sum"
+          shasum -a 512 "$DMG_NAME" > "${DMG_NAME}.sha512sum"
+          cat "${DMG_NAME}.sha256sum"
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: librewolf-macos-universal
+          path: |
+            librewolf-*-macos-universal.dmg
+            librewolf-*-macos-universal.dmg.sha256sum
+            librewolf-*-macos-universal.dmg.sha512sum
+          retention-days: 14
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          if [[ -n "${KEYCHAIN_PATH:-}" ]]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi

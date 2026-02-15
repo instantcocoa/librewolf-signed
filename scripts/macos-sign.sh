@@ -3,13 +3,11 @@
 # macos-sign.sh
 #
 # Deep-signs a LibreWolf.app bundle for distribution.
-# Signs inner-to-outer (frameworks/dylibs first, main binary last)
-# with hardened runtime and secure timestamp (required for notarization).
+# Signs inner-to-outer: all Mach-O binaries first, then frameworks,
+# helper apps, and finally the main bundle.
+# Uses hardened runtime and secure timestamp (required for notarization).
 #
-# Usage: ./scripts/macos-sign.sh <path-to.app> <signing-identity> <entitlements.plist>
-#
-# Example:
-#   ./scripts/macos-sign.sh LibreWolf.app "Developer ID Application: ..." assets/entitlements.plist
+# Usage: ./scripts/macos-sign.sh <path-to.app> <signing-identity> [entitlements.plist]
 #
 
 set -euo pipefail
@@ -48,11 +46,17 @@ echo ""
 echo "==> Stripping extended attributes..."
 xattr -cr "$APP_PATH"
 
-# Step 1: Sign all dylibs and .so files (innermost first)
-echo "==> Signing shared libraries..."
-find "$APP_PATH" \( -name "*.dylib" -o -name "*.so" \) -type f | while read -r lib; do
-    echo "  Signing: ${lib#"$APP_PATH"/}"
-    codesign "${CODESIGN_FLAGS[@]}" "$lib"
+# Step 1: Sign ALL Mach-O binaries (dylibs, shared libs, and bare executables like XUL)
+# We use `file` to detect Mach-O files rather than relying on extensions,
+# since some binaries (e.g. XUL) have no extension at all.
+echo "==> Signing all Mach-O binaries..."
+find "$APP_PATH" -type f -not -path "*/plugin-container.app/*" \
+    -not -path "*/gpu-helper.app/*" -not -path "*/media-plugin-helper.app/*" | while read -r f; do
+    # Skip non-Mach-O files quickly
+    if file "$f" | grep -q "Mach-O"; then
+        echo "  Signing: ${f#"$APP_PATH"/}"
+        codesign "${CODESIGN_FLAGS[@]}" "$f"
+    fi
 done
 
 # Step 2: Sign all frameworks
@@ -68,7 +72,7 @@ echo ""
 echo "==> Signing helper apps and XPC services..."
 find "$APP_PATH" \( -name "*.app" -o -name "*.xpc" \) -type d -not -path "$APP_PATH" | while read -r helper; do
     echo "  Signing: ${helper#"$APP_PATH"/}"
-    codesign --deep "${CODESIGN_FLAGS[@]}" "$helper"
+    codesign "${CODESIGN_FLAGS[@]}" "$helper"
 done
 
 # Step 4: Sign the main app bundle
