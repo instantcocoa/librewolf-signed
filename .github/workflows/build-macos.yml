@@ -471,24 +471,59 @@ jobs:
           TITLE="LibreWolf ${LW_VERSION}-${LW_RELEASE} (macOS Universal)"
           SHA256=$(cat "${DMG_NAME}.sha256sum" | awk '{print $1}')
 
-          cat > /tmp/release-notes.md <<NOTES
-          ## LibreWolf ${LW_VERSION}-${LW_RELEASE} for macOS
+          # Extract base Firefox version (e.g. 147.0.4 from 147.0.4-1)
+          FF_VERSION="${LW_VERSION}"
 
-          **Universal binary** (arm64 + x86_64) — works on both Apple Silicon and Intel Macs.
+          # Fetch upstream LibreWolf release notes
+          UPSTREAM_NOTES=$(curl -sf "https://codeberg.org/api/v1/repos/librewolf/source/releases/tags/${LW_VERSION}-${LW_RELEASE}" | jq -r '.body // empty') || true
 
-          Signed with Developer ID and notarized by Apple.
+          # Fetch Firefox release notes page and extract key changes
+          FF_NOTES_URL="https://www.mozilla.org/en-US/firefox/${FF_VERSION}/releasenotes/"
 
-          ### Install via Homebrew
-          \`\`\`bash
+          cat > /tmp/release-notes.md <<'HEADER'
+          ## Install
+
+          ```bash
           brew tap instantcocoa/tap
           brew install --cask librewolf-signed
-          \`\`\`
+          ```
+
+          Or download the DMG below.
+
+          HEADER
+
+          # Add upstream notes if available and non-trivial
+          if [[ -n "$UPSTREAM_NOTES" ]]; then
+            cat >> /tmp/release-notes.md <<UPSTREAM
+          ## Upstream Release Notes
+
+          ${UPSTREAM_NOTES}
+
+          UPSTREAM
+          fi
+
+          cat >> /tmp/release-notes.md <<FOOTER
+          ## Firefox ${FF_VERSION}
+
+          This build is based on Firefox ${FF_VERSION}. See the [Firefox ${FF_VERSION} release notes](${FF_NOTES_URL}) for details on security fixes and changes.
+
+          ## Build Details
+
+          **Universal binary** (arm64 + x86_64) — works on both Apple Silicon and Intel Macs.
+          Signed with Developer ID and notarized by Apple.
+
+          | | |
+          |---|---|
+          | **LibreWolf version** | ${LW_VERSION}-${LW_RELEASE} |
+          | **Firefox base** | ${FF_VERSION} |
+          | **Architecture** | Universal (arm64 + x86_64) |
+          | **Source** | [codeberg.org/librewolf/source](https://codeberg.org/librewolf/source/releases/tag/${LW_VERSION}-${LW_RELEASE}) |
 
           ### Checksums (SHA-256)
           \`\`\`
           ${SHA256}  ${DMG_NAME}
           \`\`\`
-          NOTES
+          FOOTER
 
           # Create the release (or update if tag already exists)
           gh release create "$TAG" \
