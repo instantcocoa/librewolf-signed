@@ -15,9 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           # Must use a PAT here — pushes with GITHUB_TOKEN don't trigger other workflows
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          submodules: recursive
 
       - name: Get current version
         id: current
@@ -47,37 +47,37 @@ jobs:
       - name: Sync from upstream
         if: steps.compare.outputs.needs_update == 'true'
         run: |
+          UPSTREAM_TAG="${{ steps.upstream.outputs.upstream }}"
+          echo "Syncing to upstream ${UPSTREAM_TAG}..."
+
+          # Clone the upstream repo at the release tag
+          git clone --depth=1 --branch="${UPSTREAM_TAG}" \
+            https://codeberg.org/librewolf/source.git /tmp/upstream
+
+          # Copy upstream files over ours, preserving our CI/signing files
+          # First, sync everything except our custom directories/files
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='scripts/macos-sign.sh' \
+            --exclude='scripts/macos-create-universal.sh' \
+            --exclude='assets/entitlements.plist' \
+            --exclude='assets/mozconfig.macos' \
+            /tmp/upstream/ ./
+
+          echo "Synced upstream files. New version: $(cat version)-$(cat release)"
+
+      - name: Commit and push
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          UPSTREAM_TAG="${{ steps.upstream.outputs.upstream }}"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Add upstream remote
-          git remote add upstream https://codeberg.org/librewolf/source.git
-
-          # Fetch the upstream tag
-          UPSTREAM_TAG="${{ steps.upstream.outputs.upstream }}"
-          git fetch upstream "refs/tags/${UPSTREAM_TAG}:refs/tags/upstream-${UPSTREAM_TAG}" --depth=1
-          git fetch upstream main --depth=50
-
-          # Merge upstream changes, keeping our custom files on conflict
-          # Our custom files (.github/, scripts/macos-*, assets/entitlements.plist, etc.)
-          # don't exist upstream, so there should be no conflicts.
-          git merge upstream/main \
-            --no-edit \
-            -m "Sync upstream LibreWolf ${UPSTREAM_TAG}" \
-            --strategy-option theirs \
-          || {
-            echo "Merge conflict detected. Attempting to resolve..."
-            # Accept upstream for version/release/patches/settings, keep ours for CI files
-            git checkout --theirs version release settings patches/ l10n/ themes/ assets/mozconfig* scripts/librewolf-patches.py Makefile 2>/dev/null || true
-            git checkout --ours .github/ scripts/macos-*.sh assets/entitlements.plist assets/mozconfig.macos 2>/dev/null || true
-            git add -A
-            git commit --no-edit -m "Sync upstream LibreWolf ${UPSTREAM_TAG} (resolved conflicts)"
-          }
-
-          echo "Merged upstream ${UPSTREAM_TAG}"
-
-      - name: Push changes
-        if: steps.compare.outputs.needs_update == 'true'
-        run: |
+          git add -A
+          git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
+          git commit -m "Sync upstream LibreWolf ${UPSTREAM_TAG}"
           git push origin main
+
           echo "Pushed. This will trigger the build workflow."
