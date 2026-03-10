@@ -9,4 +9,3 @@ MOZ_APP_NAME=librewolf
 MOZ_APP_BASENAME=LibreWolf
 MOZ_APP_DISPLAYNAME=LibreWolf
 MOZ_APP_REMOTINGNAME=librewolf
-MOZ_MACBUNDLE_ID=com.instantcocoa.librewolf
