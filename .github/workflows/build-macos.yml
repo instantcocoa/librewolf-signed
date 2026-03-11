@@ -181,7 +181,7 @@ jobs:
 
       - name: Print sccache stats
         if: always()
-        run: sccache --show-stats
+        run: sccache --show-stats || true
 
       - name: Package
         run: |
@@ -288,7 +288,7 @@ jobs:
 
       - name: Print sccache stats
         if: always()
-        run: sccache --show-stats
+        run: sccache --show-stats || true
 
       - name: Package
         run: |
