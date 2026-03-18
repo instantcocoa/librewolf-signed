@@ -89,6 +89,10 @@ def leave_srcdir():
 def librewolf_patches():
 
     enter_srcdir()
+
+    # remove OpenAI integration
+    exec('rm -vf toolkit/components/ml/content/backends/OpenAIPipeline.mjs')
+    exec('rm -vrf toolkit/components/ml/vendor/openai')
     
     # create the right mozconfig file..
     exec('cp -v ../assets/mozconfig.new mozconfig')
@@ -177,7 +181,7 @@ def librewolf_patches():
                 *rel_path.parts[1:]
             )
 
-        if ".properties.inc" in target_path.name and "en-US" not in str(target_path):
+        if "sitePermissions.inc.properties" in target_path.name and "en-US" not in str(target_path):
             target_path = Path(
                 "lw", "l10n",
                 rel_path.parts[0],
@@ -186,7 +190,24 @@ def librewolf_patches():
                 rel_path.parts[-1]
             )
 
-        if ".properties.inc" in target_path.name and "en-US" in str(target_path):
+        if "sitePermissions.inc.properties" in target_path.name and "en-US" in str(target_path):
+            target_path = Path(
+                "browser", "locales",
+                "en-US", "chrome",
+                "browser",
+                rel_path.parts[-1]
+            )
+
+        if "browser.inc.properties" in target_path.name and "en-US" not in str(target_path):
+            target_path = Path(
+                "lw", "l10n",
+                rel_path.parts[0],
+                "browser", "chrome",
+                "browser",
+                rel_path.parts[-1]
+            )
+
+        if "browser.inc.properties" in target_path.name and "en-US" in str(target_path):
             target_path = Path(
                 "browser", "locales",
                 "en-US", "chrome",
