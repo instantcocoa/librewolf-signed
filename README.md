@@ -1,3 +1,18 @@
+# LibreWolf macOS (Signed & Notarized)
+
+Signed and notarized macOS universal binary builds of [LibreWolf](https://librewolf.net), produced automatically from upstream releases.
+
+## Install
+
+```bash
+brew tap instantcocoa/tap
+brew install --cask librewolf-signed
+```
+
+Or download the latest DMG from [Releases](../../releases).
+
+---
+
 # LibreWolf Source Repository
 
 This repository contains all the patches and theming that make up LibreWolf, as well as scripts and a Makefile to build LibreWolf. There also is the [Settings repository](https://codeberg.org/librewolf/settings), which contains the LibreWolf preferences.
