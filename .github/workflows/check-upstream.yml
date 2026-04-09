@@ -67,6 +67,14 @@ jobs:
 
           echo "Synced upstream files. New version: $(cat version)-$(cat release)"
 
+      - name: Apply local patches
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          for patch in .github/patches/*.sh; do
+            echo "Applying $patch..."
+            bash "$patch"
+          done
+
       - name: Commit and push
         if: steps.compare.outputs.needs_update == 'true'
         run: |

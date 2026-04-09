@@ -99,6 +99,14 @@ jobs:
           path: librewolf-*.source.tar.gz
           key: librewolf-source-${{ steps.version.outputs.VERSION }}-${{ steps.version.outputs.RELEASE }}
 
+      - name: Apply local patches
+        if: steps.cache-source.outputs.cache-hit != 'true'
+        run: |
+          for patch in .github/patches/*.sh; do
+            echo "Applying $patch..."
+            bash "$patch"
+          done
+
       - name: Build source tarball
         if: steps.cache-source.outputs.cache-hit != 'true'
         run: make all
