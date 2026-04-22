@@ -1,14 +1,12 @@
 patches/allow-JXL-in-non-nightly-browser.patch
 patches/always-fetch-latest-toolchain-artifact.patch
 patches/autoconfig-setEnv.patch
-patches/backport-build-fixes-from-150.patch
 patches/bootstrap.patch
 patches/custom-ubo-assets-bootstrap-location.patch
 patches/dbus_name.patch
 patches/devtools-bypass.patch
 patches/disable-data-reporting-at-compile-time.patch
 patches/firefox-in-ua.patch
-patches/flatpak-autoconf.patch
 patches/fpp-canvas-fix.patch
 patches/fullpage-translations-customization.patch
 patches/fullpage-translations.patch
@@ -24,6 +22,7 @@ patches/remove-language-packs.patch
 patches/remove-openai.patch
 patches/remove-pingsender.patch
 patches/rs-blocker.patch
+patches/rust-build.patch
 patches/rust-gentoo-musl.patch
 patches/sed-patches/stop-undesired-requests.patch
 patches/temp-macos-fix.patch
