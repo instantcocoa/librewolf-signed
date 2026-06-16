@@ -1,4 +1,3 @@
-patches/allow-JXL-in-non-nightly-browser.patch
 patches/always-fetch-latest-toolchain-artifact.patch
 patches/autoconfig-setEnv.patch
 patches/bootstrap.patch
@@ -10,6 +9,7 @@ patches/eme-clearkey.patch
 patches/eme-permission.patch
 patches/extensions-setUninstallURL.patch
 patches/firefox-in-ua.patch
+patches/fix-canvas-extraction-permission.patch
 patches/fpp-canvas-fix.patch
 patches/fullpage-translations-customization.patch
 patches/fullpage-translations.patch
