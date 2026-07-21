@@ -30,6 +30,7 @@ patches/rs-blocker.patch
 patches/rust-gentoo-musl.patch
 patches/sed-patches/stop-undesired-requests.patch
 patches/temp-macos-fix.patch
+patches/macos-relaunch-without-updater.patch
 patches/ui-patches/add-translate-page-context-menu.patch
 patches/ui-patches/allow_cookies_for_site.patch
 patches/ui-patches/firefox-view.patch
@@ -43,6 +44,7 @@ patches/ui-patches/pref-naming.patch
 patches/ui-patches/privacy-preferences.patch
 patches/ui-patches/remove-cfrprefs.patch
 patches/ui-patches/remove-organization-policy-banner.patch
+patches/ui-patches/settings-redesign.patch
 patches/ui-patches/trustpanel.patch
 patches/ui-patches/website-appearance-ui-rfp.patch
 patches/urlbarprovider-interventions.patch
