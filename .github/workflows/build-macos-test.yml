@@ -183,6 +183,16 @@ jobs:
             test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
           fi
 
+      # Start the server before configure so configure's compiler probes
+      # attach to this server instead of auto-spawning their own.
+      - name: Start sccache server
+        run: |
+          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
+          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
+          "$SCCACHE" --stop-server 2>/dev/null || true
+          "$SCCACHE" --start-server
+          "$SCCACHE" --show-stats
+
       # Explicit configure even when the restored objdir has a valid
       # config.status: configure's --enable-bootstrap downloads target-specific
       # toolchain artifacts (e.g. onnxruntime for a cross target) that mach
@@ -191,13 +201,6 @@ jobs:
         run: |
           cd "$SRC_DIR"
           ./mach configure
-
-      - name: Start sccache server
-        run: |
-          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
-          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
-          "$SCCACHE" --start-server
-          "$SCCACHE" --show-stats
 
       - name: Build
         id: build
@@ -366,6 +369,16 @@ jobs:
             test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
           fi
 
+      # Start the server before configure so configure's compiler probes
+      # attach to this server instead of auto-spawning their own.
+      - name: Start sccache server
+        run: |
+          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
+          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
+          "$SCCACHE" --stop-server 2>/dev/null || true
+          "$SCCACHE" --start-server
+          "$SCCACHE" --show-stats
+
       # Explicit configure even when the restored objdir has a valid
       # config.status: configure's --enable-bootstrap downloads target-specific
       # toolchain artifacts (e.g. onnxruntime for a cross target) that mach
@@ -374,13 +387,6 @@ jobs:
         run: |
           cd "$SRC_DIR"
           ./mach configure
-
-      - name: Start sccache server
-        run: |
-          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
-          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
-          "$SCCACHE" --start-server
-          "$SCCACHE" --show-stats
 
       - name: Build
         id: build
