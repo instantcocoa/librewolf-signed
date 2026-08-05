@@ -229,3 +229,158 @@ jobs:
           df -h /
           echo "objdir size:"
           du -sh "$SRC_DIR/$OBJ_DIR" 2>/dev/null || true
+
+  build-x86_64-test:
+    needs: prepare-source
+    runs-on: macos-26
+    timeout-minutes: 350
+    env:
+      LW_VERSION: ${{ needs.prepare-source.outputs.version }}
+      LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
+      SRC_DIR: src
+      OBJ_DIR: obj-x86_64-apple-darwin
+      SCCACHE: /opt/homebrew/bin/sccache
+      SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
+      AWS_DEFAULT_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
+      SCCACHE_IDLE_TIMEOUT: "0"
+      SCCACHE_LOG: warn
+    steps:
+      - name: Checkout (for scripts/assets)
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
+          sudo rm -rf ~/Library/Developer/CoreSimulator || true
+          df -h /
+
+      - name: Install sccache and zstd
+        run: |
+          brew install sccache zstd
+          "$SCCACHE" --version
+          aws --version
+
+      - name: Cache bootstrap toolchains
+        id: mozbuild-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.mozbuild
+          key: mozbuild-x86_64-${{ needs.prepare-source.outputs.version }}
+          restore-keys: |
+            mozbuild-x86_64-
+
+      - name: Restore source tarball from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: librewolf-*.source.tar.gz
+          key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
+          fail-on-cache-miss: true
+
+      - name: Extract source to stable path
+        run: |
+          tar xf librewolf-*.source.tar.gz
+          mv "librewolf-${LW_VERSION}-${LW_RELEASE}" "$SRC_DIR"
+
+      - name: Install x86_64 Rust target for cross-compilation
+        run: |
+          rustup target add x86_64-apple-darwin
+
+      - name: Configure mozconfig
+        run: |
+          cp assets/mozconfig.macos "$SRC_DIR/mozconfig"
+          {
+            echo 'ac_add_options --target=x86_64-apple-darwin'
+            echo "ac_add_options --with-ccache=$SCCACHE"
+          } >> "$SRC_DIR/mozconfig"
+          cat "$SRC_DIR/mozconfig"
+
+      - name: Set deterministic MOZ_BUILD_DATE
+        run: |
+          MOZ_BUILD_DATE=$(git log -1 --format=%cd --date=format:'%Y%m%d%H%M%S' -- version release)
+          echo "MOZ_BUILD_DATE=$MOZ_BUILD_DATE" >> "$GITHUB_ENV"
+          echo "MOZ_BUILD_DATE=$MOZ_BUILD_DATE"
+
+      - name: Restore objdir from S3
+        if: ${{ !inputs.force_seed }}
+        run: |
+          EXACT="s3://$SCCACHE_BUCKET/objdir/x86_64-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          VERLATEST="s3://$SCCACHE_BUCKET/objdir/x86_64-${LW_VERSION}-latest.tar.zst"
+          restored=""
+          for key in "$EXACT" "$VERLATEST"; do
+            echo "Trying $key ..."
+            if aws s3 cp "$key" objdir.tar.zst --no-progress 2>/dev/null; then
+              restored="$key"
+              break
+            fi
+          done
+          if [[ -n "$restored" ]]; then
+            echo "Restored objdir from $restored"
+            zstd -d -c objdir.tar.zst | tar -x -C "$SRC_DIR"
+            rm -f objdir.tar.zst
+            du -sh "$SRC_DIR/$OBJ_DIR"
+            if [[ "$restored" == "$EXACT" ]]; then
+              echo "OBJDIR_EXACT=true" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "No cached objdir found — this is a seed build."
+          fi
+
+      - name: Bootstrap (skipped on exact toolchain cache hit)
+        run: |
+          if [[ "${{ steps.mozbuild-cache.outputs.cache-hit }}" == "true" && -d "$HOME/.mozbuild/clang" ]]; then
+            echo "Toolchain cache hit for this Firefox version — skipping mach bootstrap."
+          else
+            cd "$SRC_DIR"
+            # unpack-sdk.py 403 from taskcluster is non-fatal; runner has Xcode SDK
+            ./mach --no-interactive bootstrap --application-choice=browser || true
+            test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
+          fi
+
+      - name: Start sccache server
+        run: |
+          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
+          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
+          "$SCCACHE" --start-server
+          "$SCCACHE" --show-stats
+
+      - name: Build
+        run: |
+          cd "$SRC_DIR"
+          (
+            while true; do
+              sleep 300
+              echo "=== sccache sample $(date -u '+%H:%M:%S') ==="
+              "$SCCACHE" --show-stats 2>/dev/null | grep -E "Compile requests|Cache hits|Cache misses|Cache errors|read errors|write errors" || echo "(no sccache server responding)"
+            done
+          ) &
+          SAMPLER=$!
+          trap 'kill $SAMPLER 2>/dev/null || true' EXIT
+          ./mach build
+
+      - name: Print final sccache stats
+        if: always()
+        run: |
+          "$SCCACHE" --show-stats || true
+          echo "--- sccache server error log (tail) ---"
+          tail -100 "$SCCACHE_ERROR_LOG" 2>/dev/null || echo "(no server log)"
+
+      - name: Save objdir to S3
+        if: success() && env.OBJDIR_EXACT != 'true'
+        run: |
+          EXACT="s3://$SCCACHE_BUCKET/objdir/x86_64-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          VERLATEST="s3://$SCCACHE_BUCKET/objdir/x86_64-${LW_VERSION}-latest.tar.zst"
+          echo "Compressing and uploading objdir..."
+          time (tar -cf - -C "$SRC_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+            aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
+          aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+          echo "Saved objdir to $EXACT and $VERLATEST"
+
+      - name: Report timings
+        if: always()
+        run: |
+          df -h /
+          echo "objdir size:"
+          du -sh "$SRC_DIR/$OBJ_DIR" 2>/dev/null || true
