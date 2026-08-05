@@ -1,0 +1,14 @@
+{
+  "233288ec-d5cd-4536-b511-2edc1eacee14": {
+    "conversationId": "conv-a222e380-481b-414a-92dc-d7fb964dd67a",
+    "agentId": "agent-ca340d59-fc38-4eb1-ab0a-c6b42edbbce0"
+  },
+  "bcf0f51d-17e0-4eee-8625-28ea1be3c945": {
+    "conversationId": "conv-22e9f3f9-f211-4549-b881-b28771bd1cec",
+    "agentId": "agent-ca340d59-fc38-4eb1-ab0a-c6b42edbbce0"
+  },
+  "0dbf5553-5e48-4159-83c4-f3b360c2e602": {
+    "conversationId": "conv-e452c424-1e06-4509-8c24-95811a44fbdf",
+    "agentId": "agent-ca340d59-fc38-4eb1-ab0a-c6b42edbbce0"
+  }
+}

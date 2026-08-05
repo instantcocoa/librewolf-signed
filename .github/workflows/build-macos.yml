@@ -201,9 +201,10 @@ jobs:
       - name: Restore objdir from S3
         run: |
           EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          PARTIAL="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}-partial.tar.zst"
           VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
           restored=""
-          for key in "$EXACT" "$VERLATEST"; do
+          for key in "$EXACT" "$PARTIAL" "$VERLATEST"; do
             echo "Trying $key ..."
             if aws s3 cp "$key" objdir.tar.zst --no-progress 2>/dev/null; then
               restored="$key"
@@ -243,6 +244,9 @@ jobs:
           "$SCCACHE" --show-stats
 
       - name: Build
+        id: build
+        # Step-level timeout leaves job time to checkpoint a partial objdir.
+        timeout-minutes: 300
         run: |
           cd "$SOURCE_DIR"
           # Sample sccache stats during the build to verify cache traffic and
@@ -266,15 +270,28 @@ jobs:
           tail -100 "$SCCACHE_ERROR_LOG" 2>/dev/null || echo "(no server log)"
 
       - name: Save objdir to S3
-        if: success() && env.OBJDIR_EXACT != 'true'
+        # Runs on build failure/timeout too: a partial objdir is a valid
+        # incremental resume point. sccache already banks per-object results
+        # continuously; this checkpoints link/codegen state as well.
+        if: ${{ !cancelled() && env.OBJDIR_EXACT != 'true' }}
         run: |
+          [[ -d "$SOURCE_DIR/$OBJ_DIR" ]] || { echo "No objdir to save."; exit 0; }
           EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          PARTIAL="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}-partial.tar.zst"
           VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
-          echo "Compressing and uploading objdir..."
-          time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
-            aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
-          aws s3 cp "$EXACT" "$VERLATEST" --no-progress
-          echo "Saved objdir to $EXACT and $VERLATEST"
+          if [[ "${{ steps.build.outcome }}" == "success" ]]; then
+            echo "Build succeeded — uploading complete objdir..."
+            time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+              aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
+            aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+            aws s3 rm "$PARTIAL" 2>/dev/null || true
+            echo "Saved objdir to $EXACT and $VERLATEST"
+          else
+            echo "Build did not succeed — checkpointing partial objdir..."
+            time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+              aws s3 cp - "$PARTIAL" --no-progress --expected-size 32212254720)
+            echo "Saved partial objdir to $PARTIAL"
+          fi
 
       - name: Package
         run: |
@@ -393,9 +410,10 @@ jobs:
       - name: Restore objdir from S3
         run: |
           EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          PARTIAL="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}-partial.tar.zst"
           VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
           restored=""
-          for key in "$EXACT" "$VERLATEST"; do
+          for key in "$EXACT" "$PARTIAL" "$VERLATEST"; do
             echo "Trying $key ..."
             if aws s3 cp "$key" objdir.tar.zst --no-progress 2>/dev/null; then
               restored="$key"
@@ -435,6 +453,9 @@ jobs:
           "$SCCACHE" --show-stats
 
       - name: Build
+        id: build
+        # Step-level timeout leaves job time to checkpoint a partial objdir.
+        timeout-minutes: 300
         run: |
           cd "$SOURCE_DIR"
           # Sample sccache stats during the build to verify cache traffic and
@@ -458,15 +479,28 @@ jobs:
           tail -100 "$SCCACHE_ERROR_LOG" 2>/dev/null || echo "(no server log)"
 
       - name: Save objdir to S3
-        if: success() && env.OBJDIR_EXACT != 'true'
+        # Runs on build failure/timeout too: a partial objdir is a valid
+        # incremental resume point. sccache already banks per-object results
+        # continuously; this checkpoints link/codegen state as well.
+        if: ${{ !cancelled() && env.OBJDIR_EXACT != 'true' }}
         run: |
+          [[ -d "$SOURCE_DIR/$OBJ_DIR" ]] || { echo "No objdir to save."; exit 0; }
           EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          PARTIAL="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}-partial.tar.zst"
           VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
-          echo "Compressing and uploading objdir..."
-          time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
-            aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
-          aws s3 cp "$EXACT" "$VERLATEST" --no-progress
-          echo "Saved objdir to $EXACT and $VERLATEST"
+          if [[ "${{ steps.build.outcome }}" == "success" ]]; then
+            echo "Build succeeded — uploading complete objdir..."
+            time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+              aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
+            aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+            aws s3 rm "$PARTIAL" 2>/dev/null || true
+            echo "Saved objdir to $EXACT and $VERLATEST"
+          else
+            echo "Build did not succeed — checkpointing partial objdir..."
+            time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+              aws s3 cp - "$PARTIAL" --no-progress --expected-size 32212254720)
+            echo "Saved partial objdir to $PARTIAL"
+          fi
 
       - name: Package
         run: |
