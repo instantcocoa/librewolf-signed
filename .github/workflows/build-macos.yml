@@ -121,14 +121,19 @@ jobs:
       contents: read
       id-token: write
     env:
-      SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
+      # Version-independent source dir: keeps absolute paths stable across
+      # version/release bumps so sccache and the S3 objdir cache stay valid.
+      SOURCE_DIR: src
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
       LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
       SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       SCCACHE_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
-      SCCACHE_CACHE_SIZE: "20G"
+      AWS_DEFAULT_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
+      SCCACHE: /opt/homebrew/bin/sccache
+      SCCACHE_IDLE_TIMEOUT: "0"
+      SCCACHE_LOG: warn
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
@@ -139,13 +144,13 @@ jobs:
           sudo rm -rf ~/Library/Developer/CoreSimulator || true
           df -h /
 
-      - name: Install sccache
+      - name: Install sccache and zstd
         run: |
-          brew install sccache
-          sccache --version
-          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          brew install sccache zstd
+          "$SCCACHE" --version
 
       - name: Cache bootstrap toolchains
+        id: mozbuild-cache
         uses: actions/cache@v4
         with:
           path: ~/.mozbuild
@@ -160,36 +165,116 @@ jobs:
           key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
           fail-on-cache-miss: true
 
-      - name: Extract source
+      - name: Extract source to stable path
         run: |
           tar xf librewolf-*.source.tar.gz
+          mv "librewolf-${LW_VERSION}-${LW_RELEASE}" "$SOURCE_DIR"
           ls -la "$SOURCE_DIR/"
 
       - name: Configure mozconfig for arm64
         run: |
           cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
           echo 'ac_add_options --target=aarch64-apple-darwin' >> "$SOURCE_DIR/mozconfig"
-          echo 'ac_add_options --with-ccache=sccache' >> "$SOURCE_DIR/mozconfig"
+          echo "ac_add_options --with-ccache=$SCCACHE" >> "$SOURCE_DIR/mozconfig"
           echo "--- mozconfig ---"
           cat "$SOURCE_DIR/mozconfig"
 
-      - name: Bootstrap
+      - name: Set build vars (objdir, arch key, deterministic build id)
         run: |
-          cd "$SOURCE_DIR"
-          # The bootstrap may fail on unpack-sdk.py (403 from taskcluster)
-          # but this is non-fatal — the macOS runner already has Xcode SDK.
-          ./mach --no-interactive bootstrap --application-choice=browser || true
-          # Verify essential toolchains were downloaded
-          test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
+          TARGET=$(sed -n 's/^ac_add_options --target=//p' "$SOURCE_DIR/mozconfig")
+          OBJ_DIR="obj-$TARGET"
+          case "$TARGET" in
+            aarch64*) ARCH_KEY=arm64 ;;
+            *)        ARCH_KEY=x86_64 ;;
+          esac
+          # Deterministic build id per version+release: generated headers keep
+          # identical content on rebuilds, so FileAvoidWrite skips them and
+          # no-op incremental builds avoid the expensive libxul relink.
+          MOZ_BUILD_DATE=$(git log -1 --format=%cd --date=format:'%Y%m%d%H%M%S' -- version release)
+          {
+            echo "OBJ_DIR=$OBJ_DIR"
+            echo "ARCH_KEY=$ARCH_KEY"
+            echo "MOZ_BUILD_DATE=$MOZ_BUILD_DATE"
+          } >> "$GITHUB_ENV"
+          echo "OBJ_DIR=$OBJ_DIR ARCH_KEY=$ARCH_KEY MOZ_BUILD_DATE=$MOZ_BUILD_DATE"
+
+      - name: Restore objdir from S3
+        run: |
+          EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
+          restored=""
+          for key in "$EXACT" "$VERLATEST"; do
+            echo "Trying $key ..."
+            if aws s3 cp "$key" objdir.tar.zst --no-progress 2>/dev/null; then
+              restored="$key"
+              break
+            fi
+          done
+          if [[ -n "$restored" ]]; then
+            echo "Restored objdir from $restored"
+            zstd -d -c objdir.tar.zst | tar -x -C "$SOURCE_DIR"
+            rm -f objdir.tar.zst
+            du -sh "$SOURCE_DIR/$OBJ_DIR"
+            if [[ "$restored" == "$EXACT" ]]; then
+              echo "OBJDIR_EXACT=true" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "No cached objdir found — full build."
+          fi
+
+      - name: Bootstrap (skipped on exact toolchain cache hit)
+        run: |
+          if [[ "${{ steps.mozbuild-cache.outputs.cache-hit }}" == "true" && -d "$HOME/.mozbuild/clang" ]]; then
+            echo "Toolchain cache hit for this Firefox version — skipping mach bootstrap."
+          else
+            cd "$SOURCE_DIR"
+            # The bootstrap may fail on unpack-sdk.py (403 from taskcluster)
+            # but this is non-fatal — the macOS runner already has Xcode SDK.
+            ./mach --no-interactive bootstrap --application-choice=browser || true
+            # Verify essential toolchains were downloaded
+            test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
+          fi
+
+      - name: Start sccache server
+        run: |
+          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
+          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
+          "$SCCACHE" --start-server
+          "$SCCACHE" --show-stats
 
       - name: Build
         run: |
           cd "$SOURCE_DIR"
+          # Sample sccache stats during the build to verify cache traffic and
+          # spot server restarts (stats counters reset on restart).
+          (
+            while true; do
+              sleep 300
+              echo "=== sccache sample $(date -u '+%H:%M:%S') ==="
+              "$SCCACHE" --show-stats 2>/dev/null | grep -E "Compile requests|Cache hits|Cache misses|Cache errors|read errors|write errors" || echo "(no sccache server responding)"
+            done
+          ) &
+          SAMPLER=$!
+          trap 'kill $SAMPLER 2>/dev/null || true' EXIT
           ./mach build
 
       - name: Print sccache stats
         if: always()
-        run: sccache --show-stats || true
+        run: |
+          "$SCCACHE" --show-stats || true
+          echo "--- sccache server error log (tail) ---"
+          tail -100 "$SCCACHE_ERROR_LOG" 2>/dev/null || echo "(no server log)"
+
+      - name: Save objdir to S3
+        if: success() && env.OBJDIR_EXACT != 'true'
+        run: |
+          EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
+          echo "Compressing and uploading objdir..."
+          time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+            aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
+          aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+          echo "Saved objdir to $EXACT and $VERLATEST"
 
       - name: Package
         run: |
@@ -224,14 +309,19 @@ jobs:
       contents: read
       id-token: write
     env:
-      SOURCE_DIR: ${{ needs.prepare-source.outputs.source_dir }}
+      # Version-independent source dir: keeps absolute paths stable across
+      # version/release bumps so sccache and the S3 objdir cache stay valid.
+      SOURCE_DIR: src
       LW_VERSION: ${{ needs.prepare-source.outputs.version }}
       LW_RELEASE: ${{ needs.prepare-source.outputs.release }}
       SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       SCCACHE_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
-      SCCACHE_CACHE_SIZE: "20G"
+      AWS_DEFAULT_REGION: ${{ secrets.SCCACHE_REGION || 'us-east-1' }}
+      SCCACHE: /opt/homebrew/bin/sccache
+      SCCACHE_IDLE_TIMEOUT: "0"
+      SCCACHE_LOG: warn
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
@@ -242,13 +332,13 @@ jobs:
           sudo rm -rf ~/Library/Developer/CoreSimulator || true
           df -h /
 
-      - name: Install sccache
+      - name: Install sccache and zstd
         run: |
-          brew install sccache
-          sccache --version
-          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          brew install sccache zstd
+          "$SCCACHE" --version
 
       - name: Cache bootstrap toolchains
+        id: mozbuild-cache
         uses: actions/cache@v4
         with:
           path: ~/.mozbuild
@@ -263,9 +353,10 @@ jobs:
           key: librewolf-source-${{ needs.prepare-source.outputs.version }}-${{ needs.prepare-source.outputs.release }}
           fail-on-cache-miss: true
 
-      - name: Extract source
+      - name: Extract source to stable path
         run: |
           tar xf librewolf-*.source.tar.gz
+          mv "librewolf-${LW_VERSION}-${LW_RELEASE}" "$SOURCE_DIR"
           ls -la "$SOURCE_DIR/"
 
       - name: Install x86_64 Rust target for cross-compilation
@@ -276,27 +367,106 @@ jobs:
         run: |
           cp assets/mozconfig.macos "$SOURCE_DIR/mozconfig"
           echo 'ac_add_options --target=x86_64-apple-darwin' >> "$SOURCE_DIR/mozconfig"
-          echo 'ac_add_options --with-ccache=sccache' >> "$SOURCE_DIR/mozconfig"
+          echo "ac_add_options --with-ccache=$SCCACHE" >> "$SOURCE_DIR/mozconfig"
           echo "--- mozconfig ---"
           cat "$SOURCE_DIR/mozconfig"
 
-      - name: Bootstrap
+      - name: Set build vars (objdir, arch key, deterministic build id)
         run: |
-          cd "$SOURCE_DIR"
-          # The bootstrap may fail on unpack-sdk.py (403 from taskcluster)
-          # but this is non-fatal — the macOS runner already has Xcode SDK.
-          ./mach --no-interactive bootstrap --application-choice=browser || true
-          # Verify essential toolchains were downloaded
-          test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
+          TARGET=$(sed -n 's/^ac_add_options --target=//p' "$SOURCE_DIR/mozconfig")
+          OBJ_DIR="obj-$TARGET"
+          case "$TARGET" in
+            aarch64*) ARCH_KEY=arm64 ;;
+            *)        ARCH_KEY=x86_64 ;;
+          esac
+          # Deterministic build id per version+release: generated headers keep
+          # identical content on rebuilds, so FileAvoidWrite skips them and
+          # no-op incremental builds avoid the expensive libxul relink.
+          MOZ_BUILD_DATE=$(git log -1 --format=%cd --date=format:'%Y%m%d%H%M%S' -- version release)
+          {
+            echo "OBJ_DIR=$OBJ_DIR"
+            echo "ARCH_KEY=$ARCH_KEY"
+            echo "MOZ_BUILD_DATE=$MOZ_BUILD_DATE"
+          } >> "$GITHUB_ENV"
+          echo "OBJ_DIR=$OBJ_DIR ARCH_KEY=$ARCH_KEY MOZ_BUILD_DATE=$MOZ_BUILD_DATE"
+
+      - name: Restore objdir from S3
+        run: |
+          EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
+          restored=""
+          for key in "$EXACT" "$VERLATEST"; do
+            echo "Trying $key ..."
+            if aws s3 cp "$key" objdir.tar.zst --no-progress 2>/dev/null; then
+              restored="$key"
+              break
+            fi
+          done
+          if [[ -n "$restored" ]]; then
+            echo "Restored objdir from $restored"
+            zstd -d -c objdir.tar.zst | tar -x -C "$SOURCE_DIR"
+            rm -f objdir.tar.zst
+            du -sh "$SOURCE_DIR/$OBJ_DIR"
+            if [[ "$restored" == "$EXACT" ]]; then
+              echo "OBJDIR_EXACT=true" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "No cached objdir found — full build."
+          fi
+
+      - name: Bootstrap (skipped on exact toolchain cache hit)
+        run: |
+          if [[ "${{ steps.mozbuild-cache.outputs.cache-hit }}" == "true" && -d "$HOME/.mozbuild/clang" ]]; then
+            echo "Toolchain cache hit for this Firefox version — skipping mach bootstrap."
+          else
+            cd "$SOURCE_DIR"
+            # The bootstrap may fail on unpack-sdk.py (403 from taskcluster)
+            # but this is non-fatal — the macOS runner already has Xcode SDK.
+            ./mach --no-interactive bootstrap --application-choice=browser || true
+            # Verify essential toolchains were downloaded
+            test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
+          fi
+
+      - name: Start sccache server
+        run: |
+          export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
+          echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
+          "$SCCACHE" --start-server
+          "$SCCACHE" --show-stats
 
       - name: Build
         run: |
           cd "$SOURCE_DIR"
+          # Sample sccache stats during the build to verify cache traffic and
+          # spot server restarts (stats counters reset on restart).
+          (
+            while true; do
+              sleep 300
+              echo "=== sccache sample $(date -u '+%H:%M:%S') ==="
+              "$SCCACHE" --show-stats 2>/dev/null | grep -E "Compile requests|Cache hits|Cache misses|Cache errors|read errors|write errors" || echo "(no sccache server responding)"
+            done
+          ) &
+          SAMPLER=$!
+          trap 'kill $SAMPLER 2>/dev/null || true' EXIT
           ./mach build
 
       - name: Print sccache stats
         if: always()
-        run: sccache --show-stats || true
+        run: |
+          "$SCCACHE" --show-stats || true
+          echo "--- sccache server error log (tail) ---"
+          tail -100 "$SCCACHE_ERROR_LOG" 2>/dev/null || echo "(no server log)"
+
+      - name: Save objdir to S3
+        if: success() && env.OBJDIR_EXACT != 'true'
+        run: |
+          EXACT="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-${LW_RELEASE}.tar.zst"
+          VERLATEST="s3://$SCCACHE_BUCKET/objdir/${ARCH_KEY}-${LW_VERSION}-latest.tar.zst"
+          echo "Compressing and uploading objdir..."
+          time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
+            aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
+          aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+          echo "Saved objdir to $EXACT and $VERLATEST"
 
       - name: Package
         run: |
