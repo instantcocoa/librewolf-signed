@@ -236,6 +236,16 @@ jobs:
             test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
           fi
 
+      # Explicit configure even when the restored objdir has a valid
+      # config.status: configure's --enable-bootstrap is what downloads
+      # target-specific toolchain artifacts (e.g. onnxruntime for a cross
+      # target) that mach bootstrap does not fetch. Self-heals evicted
+      # ~/.mozbuild caches; near-no-op when everything is present.
+      - name: Configure (ensure target toolchains)
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach configure
+
       - name: Start sccache server
         run: |
           export SCCACHE_ERROR_LOG="$RUNNER_TEMP/sccache-server.log"
@@ -444,6 +454,16 @@ jobs:
             # Verify essential toolchains were downloaded
             test -d "$HOME/.mozbuild/clang" || { echo "ERROR: clang not bootstrapped"; exit 1; }
           fi
+
+      # Explicit configure even when the restored objdir has a valid
+      # config.status: configure's --enable-bootstrap is what downloads
+      # target-specific toolchain artifacts (e.g. onnxruntime for a cross
+      # target) that mach bootstrap does not fetch. Self-heals evicted
+      # ~/.mozbuild caches; near-no-op when everything is present.
+      - name: Configure (ensure target toolchains)
+        run: |
+          cd "$SOURCE_DIR"
+          ./mach configure
 
       - name: Start sccache server
         run: |
