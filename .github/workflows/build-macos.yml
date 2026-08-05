@@ -283,7 +283,7 @@ jobs:
             echo "Build succeeded — uploading complete objdir..."
             time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
               aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
-            aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+            aws s3 cp "$EXACT" "$VERLATEST" --no-progress || echo "WARNING: failed to update version-latest alias (non-fatal)"
             aws s3 rm "$PARTIAL" 2>/dev/null || true
             echo "Saved objdir to $EXACT and $VERLATEST"
           else
@@ -492,7 +492,7 @@ jobs:
             echo "Build succeeded — uploading complete objdir..."
             time (tar -cf - -C "$SOURCE_DIR" "$OBJ_DIR" | zstd -T0 -3 | \
               aws s3 cp - "$EXACT" --no-progress --expected-size 32212254720)
-            aws s3 cp "$EXACT" "$VERLATEST" --no-progress
+            aws s3 cp "$EXACT" "$VERLATEST" --no-progress || echo "WARNING: failed to update version-latest alias (non-fatal)"
             aws s3 rm "$PARTIAL" 2>/dev/null || true
             echo "Saved objdir to $EXACT and $VERLATEST"
           else
