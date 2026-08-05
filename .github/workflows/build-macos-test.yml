@@ -13,6 +13,9 @@
 name: Build macOS Test (cache perf)
 
 on:
+  push:
+    branches:
+      - ci/cache-perf
   workflow_dispatch:
     inputs:
       force_seed:
