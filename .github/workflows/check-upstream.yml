@@ -58,13 +58,16 @@ jobs:
 
           # Copy upstream files over ours, preserving our CI/signing files
           # First, sync everything except our custom directories/files
+          # Note: rsync excludes are unanchored by default and match at any
+          # depth (e.g. '.git' would also match 'settings/.git'), so anchor
+          # every pattern to the sync root with a leading slash.
           rsync -a --delete \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='scripts/macos-sign.sh' \
-            --exclude='scripts/macos-create-universal.sh' \
-            --exclude='assets/entitlements.plist' \
-            --exclude='assets/mozconfig.macos' \
+            --exclude='/.git' \
+            --exclude='/.github' \
+            --exclude='/scripts/macos-sign.sh' \
+            --exclude='/scripts/macos-create-universal.sh' \
+            --exclude='/assets/entitlements.plist' \
+            --exclude='/assets/mozconfig.macos' \
             /tmp/upstream/ ./
 
           echo "Synced upstream files. New version: $(cat version)-$(cat release)"
