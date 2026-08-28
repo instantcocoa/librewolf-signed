@@ -26,10 +26,12 @@ jobs:
           echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Current version: $CURRENT_VERSION"
 
-      - name: Check upstream latest release
+      - name: Check upstream latest tag
         id: upstream
         run: |
-          LATEST=$(curl -sf https://codeberg.org/api/v1/repos/librewolf/source/releases/latest | jq -r '.tag_name')
+          # Upstream doesn't reliably publish a Release object for every tag, so
+          # read the tags list (newest first) instead of releases/latest.
+          LATEST=$(curl -sf "https://codeberg.org/api/v1/repos/librewolf/source/tags?limit=1" | jq -r '.[0].name')
           echo "upstream=$LATEST" >> "$GITHUB_OUTPUT"
           echo "Upstream version: $LATEST"
 
