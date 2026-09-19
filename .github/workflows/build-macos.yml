@@ -260,7 +260,9 @@ jobs:
       - name: Build
         id: build
         # Step-level timeout leaves job time to checkpoint a partial objdir.
-        timeout-minutes: 300
+        # GitHub-hosted runners hard-cap total job time at 360 min regardless
+        # of this setting, so this must stay comfortably under that.
+        timeout-minutes: 330
         run: |
           cd "$SOURCE_DIR"
           # Sample sccache stats during the build to verify cache traffic and
@@ -483,7 +485,9 @@ jobs:
       - name: Build
         id: build
         # Step-level timeout leaves job time to checkpoint a partial objdir.
-        timeout-minutes: 300
+        # GitHub-hosted runners hard-cap total job time at 360 min regardless
+        # of this setting, so this must stay comfortably under that.
+        timeout-minutes: 330
         run: |
           cd "$SOURCE_DIR"
           # Sample sccache stats during the build to verify cache traffic and

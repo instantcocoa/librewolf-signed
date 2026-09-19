@@ -1,0 +1,34 @@
+name: Retry failed macOS build
+
+# build-macos.yml checkpoints a partial objdir to S3 on failure/timeout and
+# restores it on the next attempt (see "Save/Restore objdir" steps there), so
+# a retry after a timeout resumes near where it left off instead of starting
+# cold. This workflow automates that retry, capped to avoid looping forever
+# on a genuine, reproducible failure.
+
+on:
+  workflow_run:
+    workflows: ["Build macOS (Universal)"]
+    types: [completed]
+
+permissions:
+  actions: write
+
+jobs:
+  retry:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-run failed jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          MAX_ATTEMPTS=3
+          if (( ATTEMPT >= MAX_ATTEMPTS )); then
+            echo "Run $RUN_ID has already failed $ATTEMPT times — not retrying further. Needs a human look."
+            exit 0
+          fi
+          echo "Run $RUN_ID failed on attempt $ATTEMPT/$MAX_ATTEMPTS — re-running failed jobs."
+          gh run rerun "$RUN_ID" --failed --repo "${{ github.repository }}"
