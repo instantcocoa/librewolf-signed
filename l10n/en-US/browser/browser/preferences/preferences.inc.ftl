@@ -38,6 +38,9 @@ librewolf-xorigin-ref-checkbox2 =
     .description = Send a referrer only on same-origin.
 librewolf-broken-heading2 =
     .label = Fingerprinting
+librewolf-jit-checkbox2 =
+    .label = Disable JavaScript JIT by default
+    .description = This disables JIT execution by default to reduce the attack surface, while allowing it on a per-site basis.
 librewolf-webgl-checkbox2 =
     .label = Always allow WebGL
     .description = This will always allow WebGL without requiring permission.
@@ -103,6 +106,9 @@ permissions-webgl2 =
 
 permissions-canvas2 =
     .label = Canvas extraction
+
+permissions-jit2 =
+    .label = JavaScript JIT
 
 ## General
 librewolf-rfp-warning =
