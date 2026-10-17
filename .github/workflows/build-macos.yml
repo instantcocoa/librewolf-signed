@@ -329,7 +329,7 @@ jobs:
         with:
           name: librewolf-arm64-app
           path: librewolf-arm64-app.tar.gz
-          retention-days: 1
+          retention-days: 3
 
   # ===========================================================================
   # Job 3: Build x86_64 (Intel) — cross-compiled on macos-14 (ARM)
@@ -554,7 +554,7 @@ jobs:
         with:
           name: librewolf-x86_64-app
           path: librewolf-x86_64-app.tar.gz
-          retention-days: 1
+          retention-days: 3
 
   # ===========================================================================
   # Job 4: Merge into universal, sign, create DMG, notarize
