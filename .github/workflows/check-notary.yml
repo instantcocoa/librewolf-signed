@@ -1,0 +1,25 @@
+name: Check notary credentials
+
+# Quick (~1 min) check that the App Store Connect API key can talk to the
+# notary service. Use after changing Apple agreements or the APP_STORE_CONNECT_*
+# secrets, instead of waiting for a full build to reach the notarize step.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: macos-26
+    steps:
+      - name: notarytool history
+        env:
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          echo "$APP_STORE_CONNECT_KEY" | base64 --decode > "$API_KEY_PATH"
+          xcrun notarytool history \
+            --key "$API_KEY_PATH" \
+            --key-id "$APP_STORE_CONNECT_KEY_ID" \
+            --issuer "$APP_STORE_CONNECT_ISSUER_ID"
