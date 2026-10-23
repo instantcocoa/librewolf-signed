@@ -138,6 +138,13 @@ jobs:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
 
+      # The runner's default Python (3.15) is newer than PyO3 supports, which
+      # breaks the pip install inside mach bootstrap/configure.
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Free disk space
         run: |
           sudo rm -rf /Library/Developer/CoreSimulator/Volumes/* || true
@@ -358,6 +365,13 @@ jobs:
     steps:
       - name: Checkout (for scripts/assets)
         uses: actions/checkout@v4
+
+      # The runner's default Python (3.15) is newer than PyO3 supports, which
+      # breaks the pip install inside mach bootstrap/configure.
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
       - name: Free disk space
         run: |
