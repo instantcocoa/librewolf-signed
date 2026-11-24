@@ -109,7 +109,7 @@ jobs:
 
       - name: Build source tarball
         if: steps.cache-source.outputs.cache-hit != 'true'
-        run: make all
+        run: make tarball
 
   # ===========================================================================
   # Job 2: Build arm64 (Apple Silicon) on macos-14

@@ -68,7 +68,7 @@ jobs:
 
       - name: Build source tarball
         if: steps.cache-source.outputs.cache-hit != 'true'
-        run: make all
+        run: make tarball
 
   build-arm64-test:
     needs: prepare-source
