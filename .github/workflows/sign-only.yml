@@ -1,4 +1,4 @@
-name: Sign Only (re-sign from previous build)
+name: Sign and notarize existing build
 
 # Use this to iterate on signing/notarization without rebuilding.
 # Downloads .app artifacts from a previous successful build run.

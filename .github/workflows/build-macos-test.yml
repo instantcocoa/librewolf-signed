@@ -1,7 +1,7 @@
 # =============================================================================
-# CI cache performance test workflow — arm64 only, no signing/notarization.
+# Unsigned arm64-only build for exercising the build cache setup (no signing/notarization).
 #
-# Tests four changes vs build-macos.yml:
+# Cache behavior it exercises, relative to a plain build:
 #   1. Stable source dir (src/) so sccache keys survive version/release bumps
 #   2. Explicit sccache binary + pre-started server (S3 backend) + mid-build
 #      stats sampling to verify traffic actually flows
@@ -10,7 +10,8 @@
 #
 # Uses the same SCCACHE_BUCKET / AWS secrets as build-macos.yml.
 # =============================================================================
-name: Build macOS Test (cache perf)
+name: Build macOS arm64 (unsigned)
+run-name: Build macOS arm64 (unsigned) · ${{ github.event_name }}
 
 on:
   push:
