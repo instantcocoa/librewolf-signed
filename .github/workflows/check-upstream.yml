@@ -22,7 +22,7 @@ jobs:
       - name: Get current version
         id: current
         run: |
-          CURRENT_VERSION="$(cat version)-$(cat release)"
+          CURRENT_VERSION="$(make -s version)-$(make -s release)"
           echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Current version: $CURRENT_VERSION"
 
@@ -70,7 +70,7 @@ jobs:
             --exclude='/assets/mozconfig.macos' \
             /tmp/upstream/ ./
 
-          echo "Synced upstream files. New version: $(cat version)-$(cat release)"
+          echo "Synced upstream files. New version: $(make -s version)-$(make -s release)"
 
       - name: Apply local patches
         if: steps.compare.outputs.needs_update == 'true'
