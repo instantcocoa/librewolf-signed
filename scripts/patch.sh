@@ -39,6 +39,10 @@ cp -v ../assets/2c4b8834-030c-4097-a887-c7506689095c.meta.json services/settings
 cp -v ../assets/marsigner.der toolkit/mozapps/update/updater/release_primary.der
 cp -v ../assets/marsigner2.der toolkit/mozapps/update/updater/release_secondary.der
 
+# Copy `about:librewolf` pages
+cp -v ../assets/librewolf.html toolkit/content/librewolf.html
+cp -v ../assets/aboutLibreWolf.css toolkit/content/aboutLibreWolf.css
+
 # Apply most recent `settings` repository files.
 mkdir -p lw
 cp -v ../settings/librewolf.cfg lw/

@@ -1,10 +1,10 @@
 Various visual improvements to the trustpanel
 ---
 diff --git a/browser/themes/shared/controlcenter/panel.css b/browser/themes/shared/controlcenter/panel.css
-index 7a5d6a777c..1997c45d3f 100644
+index 9adefb8a96..8fbac02121 100644
 --- a/browser/themes/shared/controlcenter/panel.css
 +++ b/browser/themes/shared/controlcenter/panel.css
-@@ -828,6 +828,138 @@
+@@ -903,6 +903,138 @@
    padding-block-end: var(--space-small);
  }
  

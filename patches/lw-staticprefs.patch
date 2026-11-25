@@ -1,10 +1,10 @@
 Add our own librewolf category to the static prefs file
 ---
 diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
-index 17f9237d1f..900b093efb 100644
+index 233832b2af..2b7df72d46 100644
 --- a/modules/libpref/init/StaticPrefList.yaml
 +++ b/modules/libpref/init/StaticPrefList.yaml
-@@ -12341,6 +12341,25 @@
+@@ -12429,6 +12429,25 @@
    value: true
    mirror: always
  

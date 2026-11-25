@@ -41,10 +41,10 @@ index 9bb91330f6..1d63becb50 100644
    </Extensions>
  </Package>
 diff --git a/python/mozbuild/mozbuild/mach_commands.py b/python/mozbuild/mozbuild/mach_commands.py
-index 9bb196cc22..7ca8a6caa3 100644
+index fb1e93548e..150d1d8f5a 100644
 --- a/python/mozbuild/mozbuild/mach_commands.py
 +++ b/python/mozbuild/mozbuild/mach_commands.py
-@@ -3421,7 +3421,7 @@ def repackage_msi(
+@@ -3432,7 +3432,7 @@ def repackage_msi(
  @CommandArgument(
      "--vendor",
      type=str,
@@ -53,7 +53,7 @@ index 9bb196cc22..7ca8a6caa3 100644
      required=False,
      help="The vendor to use in the Package/Identity/Name string to use in the App Manifest."
      + " Defaults to 'Mozilla'.",
-@@ -3579,7 +3579,7 @@ def repackage_msix(
+@@ -3590,7 +3590,7 @@ def repackage_msix(
          command_context.topsrcdir,
          channel=channel,
          arch=arch,

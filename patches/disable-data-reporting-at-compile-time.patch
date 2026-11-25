@@ -35,15 +35,15 @@ index a867365e94..e5c51d9573 100644
  
  def arcrc_path():
 diff --git a/python/sites/mach.txt b/python/sites/mach.txt
-index 815e1c7f5a..24f79dfc6a 100644
+index ebdb045102..909a26595d 100644
 --- a/python/sites/mach.txt
 +++ b/python/sites/mach.txt
 @@ -58,7 +58,7 @@ pth:xpcom/geckoprocesstypes_generator
  pth:xpcom/idl-parser
  # glean-sdk may not be installable if a wheel isn't available
  # and it has to be built from source.
--pypi-optional:glean-sdk==70.3.0:telemetry will not be collected
-+# pypi-optional:glean-sdk==70.3.0:telemetry will not be collected
+-pypi-optional:glean-sdk==71.0.0:telemetry will not be collected
++# pypi-optional:glean-sdk==71.0.0:telemetry will not be collected
  pypi-optional:orjson>=3.10:json operations will be slower in various tools
  # Mach gracefully handles the case where `psutil` is unavailable.
  # We aren't (yet) able to pin packages in automation, so we have to
@@ -83,10 +83,10 @@ index eba801057f..6265bb0dbc 100644
  }
  
 diff --git a/toolkit/components/telemetry/core/Telemetry.cpp b/toolkit/components/telemetry/core/Telemetry.cpp
-index 9bfd2edf7f..797bcbf651 100644
+index ab764887e3..de45044228 100644
 --- a/toolkit/components/telemetry/core/Telemetry.cpp
 +++ b/toolkit/components/telemetry/core/Telemetry.cpp
-@@ -694,7 +694,7 @@ TelemetryImpl::GetCanRecordBase(bool* ret) {
+@@ -551,7 +551,7 @@ TelemetryImpl::GetCanRecordBase(bool* ret) {
  
  NS_IMETHODIMP
  TelemetryImpl::SetCanRecordBase(bool canRecord) {
@@ -95,7 +95,7 @@ index 9bfd2edf7f..797bcbf651 100644
    if (canRecord != mCanRecordBase) {
      TelemetryHistogram::SetCanRecordBase(canRecord);
      TelemetryScalar::SetCanRecordBase(canRecord);
-@@ -720,7 +720,7 @@ TelemetryImpl::GetCanRecordExtended(bool* ret) {
+@@ -577,7 +577,7 @@ TelemetryImpl::GetCanRecordExtended(bool* ret) {
  
  NS_IMETHODIMP
  TelemetryImpl::SetCanRecordExtended(bool canRecord) {
@@ -104,14 +104,14 @@ index 9bfd2edf7f..797bcbf651 100644
    if (canRecord != mCanRecordExtended) {
      TelemetryHistogram::SetCanRecordExtended(canRecord);
      TelemetryScalar::SetCanRecordExtended(canRecord);
-@@ -763,7 +763,7 @@ already_AddRefed<nsITelemetry> TelemetryImpl::CreateTelemetryInstance() {
+@@ -620,7 +620,7 @@ already_AddRefed<nsITelemetry> TelemetryImpl::CreateTelemetryInstance() {
    }
  
    bool useTelemetry = false;
 -#ifndef FUZZING
 +#if false
    if (XRE_IsParentProcess() || XRE_IsContentProcess() || XRE_IsGPUProcess() ||
-       XRE_IsRDDProcess() || XRE_IsSocketProcess() || XRE_IsUtilityProcess()) {
+       XRE_IsRDDProcess() || XRE_IsUtilityProcess()) {
      useTelemetry = true;
 diff --git a/toolkit/library/rust/gkrust-features.mozbuild b/toolkit/library/rust/gkrust-features.mozbuild
 index 44206cc469..333379baa0 100644

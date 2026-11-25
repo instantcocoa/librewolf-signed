@@ -1,7 +1,20 @@
 Patch the old settings design to include our own pane and changes
 ---
+diff --git a/browser/app/profile/firefox.js b/browser/app/profile/firefox.js
+index aa07213392..6bb7e80893 100644
+--- a/browser/app/profile/firefox.js
++++ b/browser/app/profile/firefox.js
+@@ -3909,7 +3909,7 @@ pref("toolkit.rust-components.logging.crates", "");
+ pref("toolkit.rust-components.logging.internal-level", "Warn");
+ 
+ // Settings Redesign 2025 prefs
+-pref("browser.settings-redesign.enabled", true, locked);
++pref("browser.settings-redesign.enabled", true);
+ 
+ // Gates the in-progress Notifications sub-page and its entry card in
+ // Permissions and data. Not part of the settings-redesign section scheme, since
 diff --git a/browser/components/preferences/jar.mn b/browser/components/preferences/jar.mn
-index 3ea5d2abc7..cc3362f970 100644
+index 9eb310a85f..9430b24c8e 100644
 --- a/browser/components/preferences/jar.mn
 +++ b/browser/components/preferences/jar.mn
 @@ -11,6 +11,7 @@ browser.jar:
@@ -13,13 +26,14 @@ index 3ea5d2abc7..cc3362f970 100644
     content/browser/preferences/moreFromMozilla.js
     content/browser/preferences/fxaPairDevice.xhtml
 diff --git a/browser/components/preferences/main.js b/browser/components/preferences/main.js
-index 2ccf72a38a..589d055fbc 100644
+index 1868fa3453..82a97ad328 100644
 --- a/browser/components/preferences/main.js
 +++ b/browser/components/preferences/main.js
-@@ -528,6 +528,79 @@ SettingGroupManager.registerGroups({
-   startup: createStartupConfig(
-     Services.prefs.getBoolPref("browser.settings-redesign.enabled", false)
-   ),
+@@ -190,6 +190,82 @@ Preferences.addSetting({
+   pref: "browser.ml.chat.provider",
+ });
+ 
++SettingGroupManager.registerGroups({
 +  librewolfBehavior: {
 +    l10nId: "librewolf-general-heading2",
 +    headingLevel: 2,
@@ -93,9 +107,11 @@ index 2ccf72a38a..589d055fbc 100644
 +      },
 +    ],
 +  },
- });
- 
++});
++
  /**
+  * @param {string} id - ID of {@link SettingGroup} custom element.
+  */
 diff --git a/browser/components/preferences/preferences.js b/browser/components/preferences/preferences.js
 index df1663c5a7..2fb04ad8b9 100644
 --- a/browser/components/preferences/preferences.js
@@ -109,7 +125,7 @@ index df1663c5a7..2fb04ad8b9 100644
  /* import-globals-from moreFromMozilla.js */
  /* import-globals-from findInPage.js */
 diff --git a/browser/components/preferences/preferences.xhtml b/browser/components/preferences/preferences.xhtml
-index 8e0c6483d6..451531e1aa 100644
+index a91a2b0efd..e99a68e127 100644
 --- a/browser/components/preferences/preferences.xhtml
 +++ b/browser/components/preferences/preferences.xhtml
 @@ -35,6 +35,7 @@
@@ -120,7 +136,7 @@ index 8e0c6483d6..451531e1aa 100644
    <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-group.css" />
    <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-pane.css" />
    <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-control.css" />
-@@ -175,10 +176,10 @@
+@@ -173,10 +174,10 @@
          iconsrc="chrome://browser/skin/translations.svg"
          data-l10n-id="pane-languages-title2">
        </html:moz-page-nav-button>
@@ -135,7 +151,7 @@ index 8e0c6483d6..451531e1aa 100644
        </html:moz-page-nav-button>
        <html:moz-page-nav-button id="category-permissions-data"
          view="panePermissionsData"
-@@ -257,6 +258,7 @@
+@@ -255,6 +256,7 @@
  #include main.inc.xhtml
  #include search.inc.xhtml
  #include privacy.inc.xhtml
@@ -144,7 +160,7 @@ index 8e0c6483d6..451531e1aa 100644
  #include moreFromMozilla.inc.xhtml
          </vbox>
 diff --git a/browser/themes/shared/jar.inc.mn b/browser/themes/shared/jar.inc.mn
-index ca5b88551c..ee57db3b10 100644
+index 9f74b88b06..22d55f9078 100644
 --- a/browser/themes/shared/jar.inc.mn
 +++ b/browser/themes/shared/jar.inc.mn
 @@ -169,6 +169,7 @@

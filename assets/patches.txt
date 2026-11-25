@@ -1,3 +1,4 @@
+patches/about-librewolf.patch
 patches/add-ku-language.patch
 patches/add-mojeek.patch
 patches/always-fetch-latest-toolchain-artifact.patch
@@ -63,4 +64,5 @@ patches/updater.patch
 patches/vendor-name.patch
 patches/webgl-permission.patch
 patches/windows-theming-bug.patch
+patches/window-round.patch
 patches/xdg-dir.patch

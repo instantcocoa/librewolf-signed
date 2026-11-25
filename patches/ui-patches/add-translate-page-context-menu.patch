@@ -1,7 +1,7 @@
 Add a translate option to the context menu
 ---
 diff --git a/browser/base/content/browser-context.inc.xhtml b/browser/base/content/browser-context.inc.xhtml
-index 58cadb512b..e8ebc62154 100644
+index e4c9273b06..0fe1401a26 100644
 --- a/browser/base/content/browser-context.inc.xhtml
 +++ b/browser/base/content/browser-context.inc.xhtml
 @@ -392,6 +392,8 @@
@@ -10,14 +10,14 @@ index 58cadb512b..e8ebc62154 100644
                  data-l10n-id="main-context-menu-translate-selection"/>
 +      <menuitem id="context-translate-page"
 +                data-l10n-id="main-context-menu-translate-page"/>
-       <menu id="context-ask-chat"/>
-       <menuitem id="context-create-aitab"
-                 data-l10n-id="main-context-menu-create-aitab"
+       <menuitem id="context-turn-on-highlight-menu"
+                 data-l10n-id="main-context-menu-turn-on-actions-menu"
+                 hidden="true"/>
 diff --git a/browser/base/content/browser-context.js b/browser/base/content/browser-context.js
-index 2e617f91b9..9ea9fa47ba 100644
+index 66ccc43307..3bbf0a29d5 100644
 --- a/browser/base/content/browser-context.js
 +++ b/browser/base/content/browser-context.js
-@@ -218,6 +218,9 @@ document.addEventListener(
+@@ -221,6 +221,9 @@ document.addEventListener(
          case "context-create-aitab":
            gContextMenu.createAITab();
            break;
@@ -28,18 +28,18 @@ index 2e617f91b9..9ea9fa47ba 100644
            gContextMenu.showOnlyThisFrame();
            break;
 diff --git a/browser/base/content/nsContextMenu.sys.mjs b/browser/base/content/nsContextMenu.sys.mjs
-index e7485dde03..ef11047718 100644
+index 243667f0e1..8b6bf938c0 100644
 --- a/browser/base/content/nsContextMenu.sys.mjs
 +++ b/browser/base/content/nsContextMenu.sys.mjs
-@@ -925,6 +925,7 @@ export class nsContextMenu {
+@@ -933,6 +933,7 @@ export class nsContextMenu {
  
      this.showAndFormatSearchContextItem();
      this.showTranslateSelectionItem();
 +    this.showTranslatePageItem();
-     lazy.GenAI.buildAskChatMenu(document.getElementById("context-ask-chat"), {
-       browser: this.browser,
-       selectionInfo: this.selectionInfo,
-@@ -2667,6 +2668,42 @@ export class nsContextMenu {
+     this.showItem(
+       "context-turn-on-highlight-menu",
+       this.isTextSelected &&
+@@ -2681,6 +2682,42 @@ export class nsContextMenu {
      );
    }
  

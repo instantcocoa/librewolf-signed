@@ -18,7 +18,7 @@ index 5155b280b8..8dea266fbd 100644
  
    quickRestart() {
 diff --git a/browser/base/content/browser-main.js b/browser/base/content/browser-main.js
-index 89ebf87426..64f1449df6 100644
+index c96c05880f..7afae15b92 100644
 --- a/browser/base/content/browser-main.js
 +++ b/browser/base/content/browser-main.js
 @@ -11,9 +11,7 @@
@@ -33,10 +33,10 @@ index 89ebf87426..64f1449df6 100644
    Services.scriptloader.loadSubScript("chrome://browser/content/sidebar/browser-sidebar.js", this);
    Services.scriptloader.loadSubScript("chrome://browser/content/browser-customtitlebar.js", this);
 diff --git a/browser/base/jar.mn b/browser/base/jar.mn
-index b2b5db6040..8a0563fdc6 100644
+index 1583e51907..20d0edb1eb 100644
 --- a/browser/base/jar.mn
 +++ b/browser/base/jar.mn
-@@ -41,9 +41,7 @@ browser.jar:
+@@ -42,9 +42,7 @@ browser.jar:
          content/browser/browser-context.js            (content/browser-context.js)
          content/browser/browser-customization.js      (content/browser-customization.js)
          content/browser/browser-data-submission-info-bar.js (content/browser-data-submission-info-bar.js)
@@ -47,7 +47,7 @@ index b2b5db6040..8a0563fdc6 100644
          content/browser/browser-gestureSupport.js           (content/browser-gestureSupport.js)
          content/browser/browser-init.js                     (content/browser-init.js)
 diff --git a/browser/components/BrowserComponents.manifest b/browser/components/BrowserComponents.manifest
-index a5b11f0ab5..cca23ea5e2 100644
+index 010e84aa2a..13e6d5eece 100644
 --- a/browser/components/BrowserComponents.manifest
 +++ b/browser/components/BrowserComponents.manifest
 @@ -94,9 +94,7 @@ category browser-window-delayed-startup chrome://browser/content/browser-fullScr

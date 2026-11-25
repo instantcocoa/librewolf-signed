@@ -1,10 +1,10 @@
 Adds an option for toggling the translations feature in the old settings design
 ---
 diff --git a/browser/base/content/main-popupset.inc.xhtml b/browser/base/content/main-popupset.inc.xhtml
-index 7355f14e0d..16d1b00de7 100644
+index d2c57add2b..2ed480c164 100644
 --- a/browser/base/content/main-popupset.inc.xhtml
 +++ b/browser/base/content/main-popupset.inc.xhtml
-@@ -1031,6 +1031,8 @@
+@@ -1145,6 +1145,8 @@
                type="checkbox"
                autocheck="false"
                id="translations-panel-settings-never-translate-site"/>
@@ -14,7 +14,7 @@ index 7355f14e0d..16d1b00de7 100644
      <menuitem class="manage-languages-menuitem"
                data-l10n-id="translations-panel-settings-manage-languages"
 diff --git a/browser/base/content/main-popupset.js b/browser/base/content/main-popupset.js
-index 4b5e14bcf4..5775a01de7 100644
+index 3df9dea14d..0773a1b28c 100644
 --- a/browser/base/content/main-popupset.js
 +++ b/browser/base/content/main-popupset.js
 @@ -471,6 +471,9 @@ document.addEventListener(
@@ -28,7 +28,7 @@ index 4b5e14bcf4..5775a01de7 100644
            FullPageTranslationsPanel.openManageLanguages();
            break;
 diff --git a/browser/components/preferences/config/languages.mjs b/browser/components/preferences/config/languages.mjs
-index 831d9fd079..119a2f0751 100644
+index 3e873df5b8..6edea933fd 100644
 --- a/browser/components/preferences/config/languages.mjs
 +++ b/browser/components/preferences/config/languages.mjs
 @@ -20,6 +20,7 @@ Preferences.addAll([
@@ -70,10 +70,10 @@ index 5ba05e0171..bbd2fb97c0 100644
  </groupbox>
  
 diff --git a/browser/components/preferences/main.js b/browser/components/preferences/main.js
-index 6b20696e52..2ccf72a38a 100644
+index 3bfcc43024..1868fa3453 100644
 --- a/browser/components/preferences/main.js
 +++ b/browser/components/preferences/main.js
-@@ -663,6 +663,10 @@ var gMainPane = {
+@@ -318,6 +318,10 @@ var gMainPane = {
      window.addEventListener("unload", this);
  
      // Notify observers that the UI is now ready
@@ -84,7 +84,7 @@ index 6b20696e52..2ccf72a38a 100644
      Services.obs.notifyObservers(window, "main-pane-loaded");
      this.setInitialized();
    },
-@@ -765,39 +769,36 @@ var gMainPane = {
+@@ -408,39 +412,36 @@ var gMainPane = {
      button.disabled = !preference.value;
      return undefined;
    },
@@ -143,7 +143,7 @@ index 6b20696e52..2ccf72a38a 100644
      class TranslationsState {
        /**
 diff --git a/browser/components/translations/content/fullPageTranslationsPanel.js b/browser/components/translations/content/fullPageTranslationsPanel.js
-index 6eac00e607..7e16672f9e 100644
+index 6d885a140d..4a63b69357 100644
 --- a/browser/components/translations/content/fullPageTranslationsPanel.js
 +++ b/browser/components/translations/content/fullPageTranslationsPanel.js
 @@ -1348,6 +1348,15 @@ var FullPageTranslationsPanel = new (class {

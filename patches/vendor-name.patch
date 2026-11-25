@@ -23,10 +23,10 @@ index 22f03e99a8..65dc2a2ce9 100644
          },
  
 diff --git a/toolkit/xre/nsAppRunner.cpp b/toolkit/xre/nsAppRunner.cpp
-index 2a39c67eb8..014b37c0a6 100644
+index acd570a672..eb412e98c9 100644
 --- a/toolkit/xre/nsAppRunner.cpp
 +++ b/toolkit/xre/nsAppRunner.cpp
-@@ -2245,9 +2245,6 @@ static void DumpHelp() {
+@@ -2266,9 +2266,6 @@ static void DumpHelp() {
  }
  
  static inline void DumpVersion() {
@@ -36,7 +36,7 @@ index 2a39c67eb8..014b37c0a6 100644
    printf("%s ", (const char*)gAppData->name);
  
    // Use the displayed version
-@@ -2261,9 +2258,6 @@ static inline void DumpVersion() {
+@@ -2282,9 +2279,6 @@ static inline void DumpVersion() {
  }
  
  static inline void DumpFullVersion() {

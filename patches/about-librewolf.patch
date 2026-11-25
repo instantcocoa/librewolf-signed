@@ -1,0 +1,43 @@
+Add `about:librewolf` easter egg page
+---
+diff --git a/docshell/base/nsAboutRedirector.cpp b/docshell/base/nsAboutRedirector.cpp
+index ce1b280..3d91e04 100644
+--- a/docshell/base/nsAboutRedirector.cpp
++++ b/docshell/base/nsAboutRedirector.cpp
+@@ -155,6 +155,8 @@ static const RedirEntry kRedirMap[] = {
+          nsIAboutModule::IS_SECURE_CHROME_UI},
+     {"mozilla", "chrome://global/content/mozilla.html",
+      nsIAboutModule::URI_SAFE_FOR_UNTRUSTED_CONTENT},
++    {"librewolf", "chrome://global/content/librewolf.html",
++     nsIAboutModule::URI_SAFE_FOR_UNTRUSTED_CONTENT},
+ #if !defined(ANDROID) && !defined(XP_WIN)
+     {"webauthn", "chrome://global/content/aboutWebauthn.html",
+      nsIAboutModule::ALLOW_SCRIPT | nsIAboutModule::IS_SECURE_CHROME_UI},
+
+diff --git a/toolkit/content/jar.mn b/toolkit/content/jar.mn
+index 2591420..34131aa 100644
+--- a/toolkit/content/jar.mn
++++ b/toolkit/content/jar.mn
+@@ -63,6 +63,8 @@ toolkit.jar:
+    content/global/globalOverlay.js
+    content/global/mozilla.html
+    content/global/aboutMozilla.css
++   content/global/librewolf.html
++   content/global/aboutLibreWolf.css
+    content/global/preferencesBindings.js
+    content/global/preferences/AsyncSetting.mjs  (preferences/AsyncSetting.mjs)
+    content/global/preferences/Preference.mjs    (preferences/Preference.mjs)
+
+diff --git a/docshell/build/components.conf b/docshell/build/components.conf
+index 66a5ff8..04d2573 100644
+--- a/docshell/build/components.conf
++++ b/dochsell/build/components.conf
+@@ -15,6 +15,7 @@ about_pages = [
+     'credits',
+     'fingerprintingprotection',
+     'httpsonlyerror',
++    'librewolf',
+     'license',
+     'logging',
+     'logo',
+

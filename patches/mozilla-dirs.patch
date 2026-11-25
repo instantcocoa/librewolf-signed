@@ -145,7 +145,7 @@ index f6437f0a8b..4cedc64ef4 100644
      if (!appName.IsEmpty()) {
        folder.Append(appName);
 diff --git a/xpcom/build/nsXULAppAPI.h b/xpcom/build/nsXULAppAPI.h
-index 3e099cd130..8a56a132c3 100644
+index 5a7f79455d..84dd989fd8 100644
 --- a/xpcom/build/nsXULAppAPI.h
 +++ b/xpcom/build/nsXULAppAPI.h
 @@ -113,6 +113,8 @@ struct BootstrapConfig;

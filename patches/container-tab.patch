@@ -24,7 +24,7 @@ index 757c5b1661..c95857e01e 100644
              let clipboard = readFromClipboard();
              clipboard =
 diff --git a/browser/base/content/browser-sets.inc.xhtml b/browser/base/content/browser-sets.inc.xhtml
-index 9190c6e7f8..b75e8fc10f 100644
+index 01ae38c20c..41989477da 100644
 --- a/browser/base/content/browser-sets.inc.xhtml
 +++ b/browser/base/content/browser-sets.inc.xhtml
 @@ -20,6 +20,7 @@
@@ -35,7 +35,7 @@ index 9190c6e7f8..b75e8fc10f 100644
      <command id="Browser:OpenFile" />
      <command id="Browser:SavePage" />
  
-@@ -143,6 +144,8 @@
+@@ -144,6 +145,8 @@
           modifiers="accel" reserved="true"/>
      <key id="key_newNavigatorTab" data-l10n-id="tab-new-shortcut" modifiers="accel"
           command="cmd_newNavigatorTabNoEvent" reserved="true"/>
@@ -45,7 +45,7 @@ index 9190c6e7f8..b75e8fc10f 100644
           modifiers="accel"/>
  #ifndef XP_MACOSX
 diff --git a/browser/base/content/browser-sets.js b/browser/base/content/browser-sets.js
-index d3da8787f4..b57f53b7df 100644
+index cd16207f16..4c39e31bbf 100644
 --- a/browser/base/content/browser-sets.js
 +++ b/browser/base/content/browser-sets.js
 @@ -44,6 +44,12 @@ document.addEventListener(
@@ -86,15 +86,14 @@ index 3b8782f6fc..ce8c723dc7 100644
      }
      browser = win.gBrowser.selectedBrowser;
 diff --git a/browser/components/customkeys/CustomKeysParent.sys.mjs b/browser/components/customkeys/CustomKeysParent.sys.mjs
-index 3a3b05e5ee..663756a859 100644
+index ccb9177ea9..76adcd062f 100644
 --- a/browser/components/customkeys/CustomKeysParent.sys.mjs
 +++ b/browser/components/customkeys/CustomKeysParent.sys.mjs
-@@ -116,6 +116,8 @@ export class CustomKeysParent extends JSWindowActorParent {
+@@ -117,6 +117,7 @@ export class CustomKeysParent extends JSWindowActorParent {
      // Add some shortcuts that aren't available in menus.
      const fileCat = topWin.document.getElementById("file-menu").label;
      let cat = keys[fileCat];
-+    add(cat, "key_newNavigatorTabContainer",
-+    "customkeys-file-new-tab-current-container");
++    add(cat, "key_newNavigatorTabContainer", "customkeys-file-new-tab-current-container");
      add(cat, "key_duplicateTab", "customkeys-file-duplicate-tab");
+     add(cat, "key_copyTabURL", "customkeys-file-copy-tab-url");
      const isMac = AppConstants.platform === "macosx";
-     if (!isMac) {

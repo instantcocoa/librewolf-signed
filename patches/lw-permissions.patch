@@ -170,10 +170,10 @@ index 375f4f051c..90d9e8b9da 100644
        },
        {
 diff --git a/browser/components/preferences/config/privacy.mjs b/browser/components/preferences/config/privacy.mjs
-index 0b486f5751..f8dbb72589 100644
+index bdcbd11cd7..8c13fa23df 100644
 --- a/browser/components/preferences/config/privacy.mjs
 +++ b/browser/components/preferences/config/privacy.mjs
-@@ -344,6 +344,9 @@ Preferences.addAll([
+@@ -342,6 +342,9 @@ Preferences.addAll([
    // Fingerprinting Protection
    { id: "privacy.fingerprintingProtection", type: "bool" },
    { id: "privacy.fingerprintingProtection.pbmode", type: "bool" },
@@ -183,7 +183,7 @@ index 0b486f5751..f8dbb72589 100644
  
    // Resist Fingerprinting
    { id: "privacy.resistFingerprinting", type: "bool" },
-@@ -4289,6 +4292,21 @@ Preferences.addSetting({
+@@ -4276,6 +4279,21 @@ Preferences.addSetting({
    pref: "privacy.fingerprintingProtection.pbmode",
  });
  
@@ -206,10 +206,10 @@ index 0b486f5751..f8dbb72589 100644
    id: "etpCustomSuspectFingerprintingProtectionEnabled",
    deps: [
 diff --git a/browser/components/preferences/dialogs/sitePermissions.js b/browser/components/preferences/dialogs/sitePermissions.js
-index c19c600954..57d7fd6107 100644
+index 8499f90707..5640e04a5d 100644
 --- a/browser/components/preferences/dialogs/sitePermissions.js
 +++ b/browser/components/preferences/dialogs/sitePermissions.js
-@@ -47,6 +47,24 @@ const sitePermissionsL10n = {
+@@ -49,6 +49,24 @@ const sitePermissionsL10n = {
      disableLabel: "permissions-site-xr-disable-label",
      disableDescription: "permissions-site-xr-disable-desc",
    },
@@ -321,10 +321,10 @@ index 66306f218d..90555f16c5 100644
  
  if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
 diff --git a/browser/themes/shared/jar.inc.mn b/browser/themes/shared/jar.inc.mn
-index ea6eaeae6d..ca5b88551c 100644
+index 2ee4fc2ce2..9f74b88b06 100644
 --- a/browser/themes/shared/jar.inc.mn
 +++ b/browser/themes/shared/jar.inc.mn
-@@ -246,6 +246,7 @@
+@@ -245,6 +245,7 @@
    skin/classic/browser/history-20.svg                 (../shared/icons/history-20.svg)
    skin/classic/browser/home.svg                       (../shared/icons/home.svg)
    skin/classic/browser/import.svg                     (../shared/icons/import.svg)
@@ -332,7 +332,7 @@ index ea6eaeae6d..ca5b88551c 100644
    skin/classic/browser/labs-16.svg                    (../shared/icons/labs-16.svg)
    skin/classic/browser/library.svg                    (../shared/icons/library.svg)
    skin/classic/browser/lightning-bolt.svg             (../shared/icons/lightning-bolt.svg)
-@@ -293,6 +294,8 @@
+@@ -292,6 +293,8 @@
    skin/classic/browser/translations.svg               (../shared/icons/translations.svg)
    skin/classic/browser/thumb-down.svg                 (../shared/icons/thumb-down.svg)
    skin/classic/browser/topsites.svg                   (../shared/icons/topsites.svg)
@@ -342,7 +342,7 @@ index ea6eaeae6d..ca5b88551c 100644
    skin/classic/browser/window-firefox.svg             (../shared/icons/window-firefox.svg)
  
 diff --git a/browser/themes/shared/preferences/privacy.css b/browser/themes/shared/preferences/privacy.css
-index 896619be9a..8792ec189a 100644
+index e4016851dd..bdcea8b015 100644
 --- a/browser/themes/shared/preferences/privacy.css
 +++ b/browser/themes/shared/preferences/privacy.css
 @@ -37,6 +37,14 @@

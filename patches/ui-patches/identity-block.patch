@@ -1,10 +1,19 @@
 Make the insecure site UI element more obvious
 ---
 diff --git a/browser/themes/shared/identity-block/identity-block.css b/browser/themes/shared/identity-block/identity-block.css
-index 18bd129c43..35cd2d9cd6 100644
+index 2e369abc22..64e208929c 100644
 --- a/browser/themes/shared/identity-block/identity-block.css
 +++ b/browser/themes/shared/identity-block/identity-block.css
-@@ -338,6 +338,11 @@
+@@ -343,6 +343,8 @@
+   display: none;
+ }
+ 
++
++
+ @media -moz-pref("browser.urlbar.trustPanel.featureGate") {
+   #urlbar {
+     /* The *tracker-count* animations trigger reflows, but those shouldn't affect
+@@ -360,6 +362,11 @@
      display: none;
    }
  
@@ -14,5 +23,5 @@ index 18bd129c43..35cd2d9cd6 100644
 +  }
 +
    #trust-icon-container {
-     padding-inline: var(--urlbar-icon-padding);
-     border-radius: var(--urlbar-inner-border-radius);
+     --tracker-count-duration: 110ms;
+     --tracker-count-easing: cubic-bezier(0.2, 0.8, 0.2, 1);

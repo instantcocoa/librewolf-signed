@@ -1,7 +1,7 @@
 .POSIX:
 .PHONY: help version release bootstrap build run package tarball clean
 
-VERSION = 160.0.1
+VERSION = 161.0
 RELEASE = 1
 
 TARGET=
@@ -56,7 +56,7 @@ $(lw_source_tarball): $(lw_source_dir)
 	if [ -n "$${SIGNING_KEY}" ]; then printf '%s\n' "$${SIGNING_KEY}" | gpg --import && gpg --detach-sign $(lw_source_tarball); fi
 
 bootstrap: $(lw_source_dir)
-	(cd $(lw_source_dir) && ./mach --no-interactive bootstrap --application-choice=browser)
+	(cd $(lw_source_dir) && ./mach --no-interactive bootstrap --application-choice=browser --no-agentic-tools)
 
 build: $(lw_source_dir)
 	if [ -n "$(TARGET)" ]; then \

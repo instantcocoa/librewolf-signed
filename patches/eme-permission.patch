@@ -1,7 +1,7 @@
 Add a EME permission leveraging the existing GeckoView code. When it is blocked it appears the same as not installed/unavailable to sites
 ---
 diff --git a/browser/components/permissions/ContentPermissionPrompt.sys.mjs b/browser/components/permissions/ContentPermissionPrompt.sys.mjs
-index e71b4c79bb..fa9d5b5f5d 100644
+index b2712b2325..033cd84cc6 100644
 --- a/browser/components/permissions/ContentPermissionPrompt.sys.mjs
 +++ b/browser/components/permissions/ContentPermissionPrompt.sys.mjs
 @@ -7,6 +7,7 @@ const lazy = {};
@@ -140,10 +140,10 @@ index 0000000000..4e0d8eeec3
 +  }
 +}
 diff --git a/dom/media/eme/MediaKeySystemAccessManager.cpp b/dom/media/eme/MediaKeySystemAccessManager.cpp
-index 931c45d4eb..6c3931882c 100644
+index e6119573d4..6b40f2b9d9 100644
 --- a/dom/media/eme/MediaKeySystemAccessManager.cpp
 +++ b/dom/media/eme/MediaKeySystemAccessManager.cpp
-@@ -364,9 +364,11 @@ void MediaKeySystemAccessManager::OnDoesAppAllowProtectedMedia(
+@@ -365,9 +365,11 @@ void MediaKeySystemAccessManager::OnDoesAppAllowProtectedMedia(
                    aIsAllowed ? "true" : "false",
                    NS_ConvertUTF16toUTF8(aRequest->mKeySystem).get());
    if (!aIsAllowed) {
@@ -158,7 +158,7 @@ index 931c45d4eb..6c3931882c 100644
      return;
    }
  
-@@ -421,8 +423,8 @@ void MediaKeySystemAccessManager::RequestMediaKeySystemAccess(
+@@ -422,8 +424,8 @@ void MediaKeySystemAccessManager::RequestMediaKeySystemAccess(
      return;
    }
  
@@ -169,7 +169,7 @@ index 931c45d4eb..6c3931882c 100644
      // EME disabled by user, send notification to chrome so UI can inform user.
      // Clearkey is allowed even when EME is disabled because we want the pref
      // "media.eme.enabled" only taking effect on proprietary DRMs.
-@@ -431,12 +433,21 @@ void MediaKeySystemAccessManager::RequestMediaKeySystemAccess(
+@@ -432,12 +434,21 @@ void MediaKeySystemAccessManager::RequestMediaKeySystemAccess(
        MediaKeySystemAccess::NotifyObservers(mWindow, aRequest->mKeySystem,
                                              MediaKeySystemStatus::Api_disabled);
      }

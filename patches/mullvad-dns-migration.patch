@@ -1,7 +1,7 @@
 Add a notification that the Mullvad DNS service is being discontinued. Adapted from https://gitlab.torproject.org/tpo/applications/mullvad-browser/-/merge_requests/263
 ---
 diff --git a/browser/base/content/browser-main.js b/browser/base/content/browser-main.js
-index 64f1449df6..650a869138 100644
+index 7afae15b92..8cbad136e8 100644
 --- a/browser/base/content/browser-main.js
 +++ b/browser/base/content/browser-main.js
 @@ -30,6 +30,7 @@
@@ -86,10 +86,10 @@ index 0000000000..08731072dd
 +  );
 +});
 diff --git a/browser/base/jar.mn b/browser/base/jar.mn
-index 8a0563fdc6..eb8e3727df 100644
+index 20d0edb1eb..81aeba8aa9 100644
 --- a/browser/base/jar.mn
 +++ b/browser/base/jar.mn
-@@ -99,6 +99,7 @@ browser.jar:
+@@ -100,6 +100,7 @@ browser.jar:
          content/browser/spotlight.html                (content/spotlight.html)
          content/browser/spotlight.js                  (content/spotlight.js)
  *       content/browser/default-bookmarks.html        (content/default-bookmarks.html)

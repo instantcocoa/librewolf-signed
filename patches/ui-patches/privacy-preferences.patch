@@ -118,10 +118,10 @@ index 90d9e8b9da..dfcdcf2dad 100644
 -  },
  });
 diff --git a/browser/components/preferences/config/privacy.mjs b/browser/components/preferences/config/privacy.mjs
-index f8dbb72589..75abcd91db 100644
+index 8c13fa23df..05e461f103 100644
 --- a/browser/components/preferences/config/privacy.mjs
 +++ b/browser/components/preferences/config/privacy.mjs
-@@ -904,34 +904,6 @@ SettingGroupManager.registerGroups({
+@@ -902,34 +902,6 @@ SettingGroupManager.registerGroups({
      l10nId: "history-group",
      headingLevel: 2,
      items: [
@@ -263,10 +263,10 @@ index 885d4e14e1..fd4bf9cb2d 100644
      initSettingGroup("dnsOverHttps");
      initSettingGroup("dnsOverHttpsAdvanced");
 diff --git a/browser/locales/en-US/browser/preferences/preferences.ftl b/browser/locales/en-US/browser/preferences/preferences.ftl
-index a51066f9a6..ab9ce7e787 100644
+index cd1150da48..cbd0eed230 100644
 --- a/browser/locales/en-US/browser/preferences/preferences.ftl
 +++ b/browser/locales/en-US/browser/preferences/preferences.ftl
-@@ -1920,8 +1920,6 @@ sitedata-cookies-exceptions3 =
+@@ -1938,8 +1938,6 @@ sitedata-cookies-exceptions3 =
  
  content-blocking-enhanced-tracking-protection = Enhanced Tracking Protection
  
@@ -276,15 +276,15 @@ index a51066f9a6..ab9ce7e787 100644
  
  content-blocking-fpi-incompatibility-warning = You are using First Party Isolation (FPI), which overrides some of { -brand-short-name }’s cookie settings.
 diff --git a/browser/themes/shared/preferences/privacy.css b/browser/themes/shared/preferences/privacy.css
-index 8792ec189a..168c427f22 100644
+index bdcea8b015..203ca37b3c 100644
 --- a/browser/themes/shared/preferences/privacy.css
 +++ b/browser/themes/shared/preferences/privacy.css
 @@ -233,7 +233,7 @@
  }
  
  .extra-information-label {
--  margin-top: 18px;
-+  margin-top: 5px;
+-  margin-block-start: 18px;
++  margin-block-start: 5px;
  }
  
  /* Apply display: block to the containers of all the category information, as
@@ -294,7 +294,7 @@ index 8792ec189a..168c427f22 100644
  .content-blocking-extra-blocking-desc {
 -  margin-inline-start: 0.5em;
 -  position: relative;
--  top: 0.65em;
+-  inset-block-start: 0.65em;
 +  margin-top: 1em;
 +  margin-bottom: 0.5em;
  }

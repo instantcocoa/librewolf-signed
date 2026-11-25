@@ -29,7 +29,7 @@ index 3e4e915c13..f7840d56d5 100644
      if (records === null) {
        // Return -1 if file is missing.
 diff --git a/services/settings/RemoteSettingsClient.sys.mjs b/services/settings/RemoteSettingsClient.sys.mjs
-index f84cdf9796..0939438db9 100644
+index 05e0799b9a..ec6ee574ea 100644
 --- a/services/settings/RemoteSettingsClient.sys.mjs
 +++ b/services/settings/RemoteSettingsClient.sys.mjs
 @@ -209,12 +209,27 @@ class AttachmentDownloader extends Downloader {
@@ -60,7 +60,7 @@ index f84cdf9796..0939438db9 100644
      await lazy.UptakeTelemetry.report(
        lazy.UptakeTelemetry.STATUS.DOWNLOAD_START,
        {
-@@ -586,7 +601,9 @@ export class RemoteSettingsClient extends EventEmitter {
+@@ -591,7 +606,9 @@ export class RemoteSettingsClient extends EventEmitter {
        }
        ({ data } = await lazy.SharedUtils.loadJSONDump(
          this.bucketName,
@@ -71,7 +71,7 @@ index f84cdf9796..0939438db9 100644
        ));
        if (data !== null) {
          lazy.console.info(`${this.identifier} falling back to JSON dump`);
-@@ -656,6 +673,16 @@ export class RemoteSettingsClient extends EventEmitter {
+@@ -661,6 +678,16 @@ export class RemoteSettingsClient extends EventEmitter {
        return;
      }
  
@@ -88,7 +88,7 @@ index f84cdf9796..0939438db9 100644
      // We want to know which timestamp we are expected to obtain in order to leverage
      // cache busting. We don't provide ETag because we don't want a 304.
      const { changes } = await lazy.Utils.fetchLatestChanges(
-@@ -1040,7 +1067,9 @@ export class RemoteSettingsClient extends EventEmitter {
+@@ -1050,7 +1077,9 @@ export class RemoteSettingsClient extends EventEmitter {
      lazy.console.info(`${this.identifier} try to restore dump`);
      const result = await lazy.RemoteSettingsWorker.importJSONDump(
        this.bucketName,
@@ -237,7 +237,7 @@ index e5b20d9b9d..d76a0302de 100644
 +  },
  };
 diff --git a/services/settings/Utils.sys.mjs b/services/settings/Utils.sys.mjs
-index a5277e213c..288d0e4d08 100644
+index 2da52f9719..09358db981 100644
 --- a/services/settings/Utils.sys.mjs
 +++ b/services/settings/Utils.sys.mjs
 @@ -102,6 +102,18 @@ XPCOMUtils.defineLazyPreferenceGetter(
@@ -285,7 +285,7 @@ index a5277e213c..288d0e4d08 100644
        );
        // Client recognize -1 as missing dump.
        lastModified = dumpTimestamp ?? -1;
-@@ -566,7 +588,13 @@ export var Utils = {
+@@ -576,7 +598,13 @@ export var Utils = {
      }
  
      return {
@@ -301,11 +301,11 @@ index a5277e213c..288d0e4d08 100644
        serverTimeMillis,
        backoffSeconds,
 diff --git a/services/settings/remote-settings.sys.mjs b/services/settings/remote-settings.sys.mjs
-index b180cfc850..79d4372716 100644
+index 959b907250..c60f5a8409 100644
 --- a/services/settings/remote-settings.sys.mjs
 +++ b/services/settings/remote-settings.sys.mjs
 @@ -16,6 +16,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
-   pushBroadcastService: "resource://gre/modules/PushBroadcastService.sys.mjs",
+   pushBroadcastService: "moz-src:///dom/push/PushBroadcastService.sys.mjs",
    RemoteSettingsClient:
      "resource://services-settings/RemoteSettingsClient.sys.mjs",
 +  SharedUtils: "resource://services-settings/SharedUtils.sys.mjs",

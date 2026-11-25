@@ -1,11 +1,11 @@
 Remove the OpenAI backend
 ---
 diff --git a/toolkit/components/aboutinference/content/aboutInference.js b/toolkit/components/aboutinference/content/aboutInference.js
-index d95aab99ab..45a1f10c7c 100644
+index a6dccf2cff..caa27c0a9f 100644
 --- a/toolkit/components/aboutinference/content/aboutInference.js
 +++ b/toolkit/components/aboutinference/content/aboutInference.js
-@@ -379,7 +379,7 @@ const INFERENCE_PAD_PRESETS = {
-     device: "cpu",
+@@ -676,7 +676,7 @@ const INFERENCE_PAD_PRESETS = {
+     dtype: "q8",
      backend: "onnx",
    },
 -  openai: {
@@ -13,7 +13,7 @@ index d95aab99ab..45a1f10c7c 100644
      inputArgs: [
        {
          role: "system",
-@@ -398,7 +398,7 @@ const INFERENCE_PAD_PRESETS = {
+@@ -695,7 +695,7 @@ const INFERENCE_PAD_PRESETS = {
      apiKey: "ollama",
      baseURL: "http://localhost:11434/v1",
      backend: "openai",
@@ -23,7 +23,7 @@ index d95aab99ab..45a1f10c7c 100644
  
  const PREDEFINED = Object.keys(INFERENCE_PAD_PRESETS);
 diff --git a/toolkit/components/ml/content/EngineProcess.sys.mjs b/toolkit/components/ml/content/EngineProcess.sys.mjs
-index 6124d43af2..3f52b14471 100644
+index 059df6d7ad..8e12594fe9 100644
 --- a/toolkit/components/ml/content/EngineProcess.sys.mjs
 +++ b/toolkit/components/ml/content/EngineProcess.sys.mjs
 @@ -36,7 +36,7 @@ export const BACKENDS = Object.freeze({

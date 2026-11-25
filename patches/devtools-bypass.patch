@@ -1,7 +1,7 @@
 Allow blocking debugger attachments and suppressing console messages
 ---
 diff --git a/devtools/server/actors/thread.js b/devtools/server/actors/thread.js
-index 6363c0c511..d14799d4cc 100644
+index 4ca7abd95c..fc7348d5a5 100644
 --- a/devtools/server/actors/thread.js
 +++ b/devtools/server/actors/thread.js
 @@ -8,6 +8,7 @@

@@ -1,7 +1,7 @@
 Add a per-site toggle in the legacy identity and the new trust panel UI to add the site to the sanitizing exceptions
 ---
 diff --git a/browser/base/content/browser-siteIdentity.js b/browser/base/content/browser-siteIdentity.js
-index 5db8eb880c..a309d8647a 100644
+index a5becd02ae..20d1f1e2db 100644
 --- a/browser/base/content/browser-siteIdentity.js
 +++ b/browser/base/content/browser-siteIdentity.js
 @@ -234,6 +234,9 @@ var gIdentityHandler = {
@@ -58,10 +58,10 @@ index 5db8eb880c..a309d8647a 100644
  
    setURI(uri) {
 diff --git a/browser/base/content/browser-trustPanel.js b/browser/base/content/browser-trustPanel.js
-index e1dfc8bb41..439b547065 100644
+index d471bed01d..51fe7c0b7c 100644
 --- a/browser/base/content/browser-trustPanel.js
 +++ b/browser/base/content/browser-trustPanel.js
-@@ -396,6 +396,9 @@ class TrustPanel {
+@@ -400,6 +400,9 @@ class TrustPanel {
        document
          .getElementById("trustpanel-toggle")
          .addEventListener("click", () => this.#toggleTrackingProtection());
@@ -71,7 +71,7 @@ index e1dfc8bb41..439b547065 100644
        document
          .getElementById("identity-popup-remove-cert-exception")
          .addEventListener("click", () => this.#removeCertException());
-@@ -496,6 +499,30 @@ class TrustPanel {
+@@ -500,6 +503,30 @@ class TrustPanel {
      BrowserCommands.reload();
    }
  
@@ -102,7 +102,7 @@ index e1dfc8bb41..439b547065 100644
    async showPopup(opts = {}) {
      // Avoid flicker between the mouseup and panel shown by manually
      // setting open attribute.
-@@ -894,6 +921,9 @@ class TrustPanel {
+@@ -921,6 +948,9 @@ class TrustPanel {
        { host: this.#displayHost }
      );
  
@@ -112,7 +112,7 @@ index e1dfc8bb41..439b547065 100644
      let hostElement = document.getElementById("trustpanel-popup-host");
      hostElement.setAttribute("value", this.#displayHost);
      hostElement.setAttribute("tooltiptext", this.#displayHost);
-@@ -933,6 +963,11 @@ class TrustPanel {
+@@ -960,6 +990,11 @@ class TrustPanel {
        "hidden",
        isPrivate
      );

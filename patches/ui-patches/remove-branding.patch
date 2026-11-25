@@ -27,10 +27,10 @@ index bebc7eadff..323e2e9973 100644
        window.AboutLoginsUtils.supportBaseURL +
        "password-manager-remember-delete-edit-logins";
 diff --git a/browser/components/aiwindow/ui/components/aitab-page/aitab-error/aitab-error.mjs b/browser/components/aiwindow/ui/components/aitab-page/aitab-error/aitab-error.mjs
-index 2f03f94424..de35f432e8 100644
+index a286893380..3de95ae34a 100644
 --- a/browser/components/aiwindow/ui/components/aitab-page/aitab-error/aitab-error.mjs
 +++ b/browser/components/aiwindow/ui/components/aitab-page/aitab-error/aitab-error.mjs
-@@ -21,11 +21,6 @@ export class AITabError extends MozLitElement {
+@@ -48,11 +48,6 @@ export class AITabError extends MozLitElement {
        />
        <main class="aitab-error">
          <div class="aitab-error-wrapper">

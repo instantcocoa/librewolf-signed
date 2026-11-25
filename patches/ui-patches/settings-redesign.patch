@@ -45,10 +45,10 @@ index afe64a82b8..d4823f66e8 100644
        },
      ],
 diff --git a/browser/components/preferences/config/account-sync.mjs b/browser/components/preferences/config/account-sync.mjs
-index 664a7dcca3..eed8ef76e0 100644
+index ba733ba019..dfa034e950 100644
 --- a/browser/components/preferences/config/account-sync.mjs
 +++ b/browser/components/preferences/config/account-sync.mjs
-@@ -839,12 +839,27 @@ let perDeviceSyncEnabled = Services.prefs.getBoolPref(
+@@ -840,12 +840,27 @@ let perDeviceSyncEnabled = Services.prefs.getBoolPref(
    false
  );
  
@@ -73,7 +73,7 @@ index 664a7dcca3..eed8ef76e0 100644
 +});
 +
  SettingGroupManager.registerGroups({
--  defaultBrowserSync: window.createDefaultBrowserConfig({
+-  defaultBrowserSync: createDefaultBrowserConfig({
 -    includeIsDefaultPane: false,
 -    inProgress: true,
 -    hiddenFromSearch: true,
@@ -81,7 +81,7 @@ index 664a7dcca3..eed8ef76e0 100644
    accountDisabled: {
      inProgress: true,
      hidden: accountsEnabled,
-@@ -857,6 +872,10 @@ SettingGroupManager.registerGroups({
+@@ -858,6 +873,10 @@ SettingGroupManager.registerGroups({
          supportPage: "managed-browser-firefox",
          headingLevel: 2,
        },
@@ -92,7 +92,7 @@ index 664a7dcca3..eed8ef76e0 100644
      ],
    },
    account: {
-@@ -955,6 +974,10 @@ SettingGroupManager.registerGroups({
+@@ -956,6 +975,10 @@ SettingGroupManager.registerGroups({
            },
          ],
        },
@@ -146,8 +146,43 @@ index 7675fab225..5cd14dd11e 100644
      ],
    },
    browserIconEntry: {
+diff --git a/browser/components/preferences/config/default-browser.mjs b/browser/components/preferences/config/default-browser.mjs
+index b79df14173..01495040cc 100644
+--- a/browser/components/preferences/config/default-browser.mjs
++++ b/browser/components/preferences/config/default-browser.mjs
+@@ -77,17 +77,13 @@ export function createDefaultBrowserConfig({
+ } = {}) {
+   const isDefaultPane = {
+     id: "isDefaultPane",
+-    l10nId: "is-default-browser-2",
++    l10nId: "librewolf-is-default-browser-2",
+     control: "moz-promo",
+-    controlAttrs: {
+-      imagesrc: "chrome://global/skin/illustrations/kit-happy.svg",
+-      imagedisplay: "cover",
+-    },
+   };
+ 
+   const isNotDefaultPane = {
+     id: "isNotDefaultPane",
+-    l10nId: "is-not-default-browser-2",
++    l10nId: "librewolf-is-not-default-browser-2",
+     control: "moz-promo",
+     options: [
+       {
+@@ -101,10 +97,6 @@ export function createDefaultBrowserConfig({
+         },
+       },
+     ],
+-    controlAttrs: {
+-      imagesrc: "chrome://global/skin/illustrations/kit-concerned.svg",
+-      imagedisplay: "cover",
+-    },
+   };
+ 
+   const items = includeIsDefaultPane
 diff --git a/browser/components/preferences/config/languages.mjs b/browser/components/preferences/config/languages.mjs
-index 119a2f0751..47cf4aada2 100644
+index 6edea933fd..745eed61fa 100644
 --- a/browser/components/preferences/config/languages.mjs
 +++ b/browser/components/preferences/config/languages.mjs
 @@ -831,12 +831,21 @@ Preferences.addSetting(
@@ -173,7 +208,7 @@ index 119a2f0751..47cf4aada2 100644
  Preferences.addSetting({
    id: "checkSpelling",
    pref: "layout.spellcheckDefault",
-@@ -962,6 +971,10 @@ SettingGroupManager.registerGroups({
+@@ -963,6 +972,10 @@ SettingGroupManager.registerGroups({
          id: "offerTranslations",
          l10nId: "settings-translations-offer-to-translate-label",
        },
@@ -185,10 +220,10 @@ index 119a2f0751..47cf4aada2 100644
          id: "translationsManageButton",
          loadPane: "translations",
 diff --git a/browser/components/preferences/config/privacy.mjs b/browser/components/preferences/config/privacy.mjs
-index 75abcd91db..4bab17023c 100644
+index 05e461f103..50127d46cb 100644
 --- a/browser/components/preferences/config/privacy.mjs
 +++ b/browser/components/preferences/config/privacy.mjs
-@@ -544,6 +544,90 @@ if (SECURITY_PRIVACY_STATUS_CARD_ENABLED) {
+@@ -542,6 +542,90 @@ if (SECURITY_PRIVACY_STATUS_CARD_ENABLED) {
    ]);
  }
  
@@ -279,7 +314,7 @@ index 75abcd91db..4bab17023c 100644
  SettingGroupManager.registerGroups({
    httpsOnly: {
      l10nId: "httpsonly-group",
-@@ -620,38 +704,6 @@ SettingGroupManager.registerGroups({
+@@ -618,38 +702,6 @@ SettingGroupManager.registerGroups({
        },
      ],
    },
@@ -318,7 +353,7 @@ index 75abcd91db..4bab17023c 100644
    nonTechnicalPrivacy: {
      l10nId: "non-technical-privacy-group",
      headingLevel: 2,
-@@ -701,39 +753,44 @@ SettingGroupManager.registerGroups({
+@@ -699,39 +751,44 @@ SettingGroupManager.registerGroups({
            role: "status",
          },
        },
@@ -390,7 +425,7 @@ index 75abcd91db..4bab17023c 100644
        },
      ],
    },
-@@ -877,10 +934,6 @@ SettingGroupManager.registerGroups({
+@@ -875,10 +932,6 @@ SettingGroupManager.registerGroups({
            },
          ],
        },
@@ -401,7 +436,7 @@ index 75abcd91db..4bab17023c 100644
      ],
    },
    networkProxy: {
-@@ -1017,13 +1070,10 @@ SettingGroupManager.registerGroups({
+@@ -1015,13 +1068,10 @@ SettingGroupManager.registerGroups({
      ],
    },
    historyAdvanced: {
@@ -417,7 +452,7 @@ index 75abcd91db..4bab17023c 100644
        {
          id: "rememberHistory",
          l10nId: "history-remember-browser-option",
-@@ -1223,19 +1273,15 @@ SettingGroupManager.registerGroups({
+@@ -1221,19 +1271,15 @@ SettingGroupManager.registerGroups({
    etpAdvanced: {
      inProgress: true,
      headingLevel: 2,
@@ -439,7 +474,7 @@ index 75abcd91db..4bab17023c 100644
            {
              id: "etpLevelStrict",
              subcategory: "etp-strict-control",
-@@ -1257,20 +1303,6 @@ SettingGroupManager.registerGroups({
+@@ -1255,20 +1301,6 @@ SettingGroupManager.registerGroups({
                },
              ],
            },
@@ -460,7 +495,7 @@ index 75abcd91db..4bab17023c 100644
          ],
        },
        {
-@@ -1286,12 +1318,6 @@ SettingGroupManager.registerGroups({
+@@ -1284,12 +1316,6 @@ SettingGroupManager.registerGroups({
            },
          ],
        },
@@ -474,10 +509,10 @@ index 75abcd91db..4bab17023c 100644
          id: "etpLevelWarning",
          control: "moz-promo",
 diff --git a/browser/components/preferences/config/tabs-browsing.mjs b/browser/components/preferences/config/tabs-browsing.mjs
-index 1a0e28ef4c..e26f01c56c 100644
+index 4a67a89208..17b6462e34 100644
 --- a/browser/components/preferences/config/tabs-browsing.mjs
 +++ b/browser/components/preferences/config/tabs-browsing.mjs
-@@ -131,7 +131,46 @@ if (srdEnabled) {
+@@ -132,7 +132,46 @@ if (srdEnabled) {
         document; when set to false, no search action happens */
      { id: "accessibility.browsewithcaret", type: "bool" },
      { id: "accessibility.typeaheadfind", type: "bool" },
@@ -524,7 +559,7 @@ index 1a0e28ef4c..e26f01c56c 100644
  }
  
  // Tabs settings
-@@ -577,6 +616,7 @@ Preferences.addSetting({
+@@ -593,6 +632,7 @@ Preferences.addSetting({
  Preferences.addSetting({
    id: "playDRMContent",
    pref: "media.eme.enabled",
@@ -532,7 +567,7 @@ index 1a0e28ef4c..e26f01c56c 100644
    visible: () => {
      if (!Services.prefs.getBoolPref("browser.eme.ui.enabled", false)) {
        return false;
-@@ -590,6 +630,26 @@ Preferences.addSetting({
+@@ -606,6 +646,26 @@ Preferences.addSetting({
      }
      return true;
    },
@@ -559,7 +594,7 @@ index 1a0e28ef4c..e26f01c56c 100644
  });
  
  // Performance settings
-@@ -814,6 +874,16 @@ SettingGroupManager.registerGroups({
+@@ -835,6 +895,16 @@ SettingGroupManager.registerGroups({
        },
      ],
    },
@@ -576,7 +611,7 @@ index 1a0e28ef4c..e26f01c56c 100644
    media: {
      l10nId: "settings-media-group",
      headingLevel: 2,
-@@ -836,6 +906,11 @@ SettingGroupManager.registerGroups({
+@@ -857,6 +927,11 @@ SettingGroupManager.registerGroups({
          l10nId: "play-drm-content",
          supportPage: "drm-content",
        },
@@ -588,41 +623,6 @@ index 1a0e28ef4c..e26f01c56c 100644
      ],
    },
    performance: {
-diff --git a/browser/components/preferences/main.js b/browser/components/preferences/main.js
-index 589d055fbc..902dffc4ed 100644
---- a/browser/components/preferences/main.js
-+++ b/browser/components/preferences/main.js
-@@ -428,17 +428,13 @@ function createDefaultBrowserConfig({
- } = {}) {
-   const isDefaultPane = {
-     id: "isDefaultPane",
--    l10nId: "is-default-browser-2",
-+    l10nId: "librewolf-is-default-browser-2",
-     control: "moz-promo",
--    controlAttrs: {
--      imagesrc: "chrome://global/skin/illustrations/kit-happy.svg",
--      imagedisplay: "cover",
--    },
-   };
- 
-   const isNotDefaultPane = {
-     id: "isNotDefaultPane",
--    l10nId: "is-not-default-browser-2",
-+    l10nId: "librewolf-is-not-default-browser-2",
-     control: "moz-promo",
-     options: [
-       {
-@@ -452,10 +448,6 @@ function createDefaultBrowserConfig({
-         },
-       },
-     ],
--    controlAttrs: {
--      imagesrc: "chrome://global/skin/illustrations/kit-concerned.svg",
--      imagedisplay: "cover",
--    },
-   };
- 
-   const items = includeIsDefaultPane
 diff --git a/browser/components/preferences/preferences.js b/browser/components/preferences/preferences.js
 index a3d3ef1c87..3501b07cd2 100644
 --- a/browser/components/preferences/preferences.js
@@ -692,10 +692,10 @@ index a3d3ef1c87..3501b07cd2 100644
      document.getElementById("addonsButton").addEventListener("click", e => {
        e.preventDefault();
 diff --git a/browser/components/preferences/preferences.xhtml b/browser/components/preferences/preferences.xhtml
-index 451531e1aa..798671ab65 100644
+index e99a68e127..fabdd88201 100644
 --- a/browser/components/preferences/preferences.xhtml
 +++ b/browser/components/preferences/preferences.xhtml
-@@ -224,6 +224,11 @@
+@@ -222,6 +222,11 @@
          iconsrc="chrome://global/skin/icons/help.svg"
          data-l10n-id="help-button-label2">
        </html:moz-page-nav-button>
@@ -811,10 +811,10 @@ index 8ef7c283dd..268849d229 100644
      };
    }
 diff --git a/browser/themes/shared/jar.inc.mn b/browser/themes/shared/jar.inc.mn
-index ee57db3b10..a12a8cdf93 100644
+index 22d55f9078..f3c1053ec0 100644
 --- a/browser/themes/shared/jar.inc.mn
 +++ b/browser/themes/shared/jar.inc.mn
-@@ -306,7 +306,7 @@
+@@ -305,7 +305,7 @@
    skin/classic/browser/search-indicator-badge-add.svg          (../shared/search/search-indicator-badge-add.svg)
    skin/classic/browser/searchbar.css                           (../shared/search/searchbar.css)
  
@@ -920,3 +920,4 @@ index 0000000000..7c552cc99c
 +       transform="matrix(0.23203125,0.40188991,-0.99392962,0.57384553,246.21921,73.888081)" />
 +  </g>
 +</svg>
+

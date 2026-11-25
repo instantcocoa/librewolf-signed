@@ -1,18 +1,18 @@
 Clear the alt-svc cache on session end, to prevent potential fingerprinting
 ---
 diff --git a/netwerk/protocol/http/nsHttpHandler.cpp b/netwerk/protocol/http/nsHttpHandler.cpp
-index e62b4d0b83..746b156325 100644
+index 2dae4d2d9a..506f929b99 100644
 --- a/netwerk/protocol/http/nsHttpHandler.cpp
 +++ b/netwerk/protocol/http/nsHttpHandler.cpp
-@@ -9,6 +9,7 @@
+@@ -8,6 +8,7 @@
+ #include <bitset>
  
  #include "ASpdySession.h"
- #include "AltServiceChild.h"
 +#include "CacheObserver.h"
  #include "EventTokenBucket.h"
  #include "HttpLog.h"
  #include "LoadContextInfo.h"
-@@ -2332,6 +2333,11 @@ nsHttpHandler::Observe(nsISupports* subject, const char* topic,
+@@ -2300,6 +2301,11 @@ nsHttpHandler::Observe(nsISupports* subject, const char* topic,
      // clear cache of all authentication credentials.
      mAuthCache->ClearAll();
      mPrivateAuthCache->ClearAll();

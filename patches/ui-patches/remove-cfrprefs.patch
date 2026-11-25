@@ -1,10 +1,10 @@
 Remove CFR recommendations
 ---
 diff --git a/browser/components/preferences/config/tabs-browsing.mjs b/browser/components/preferences/config/tabs-browsing.mjs
-index 4d7a6976de..1a0e28ef4c 100644
+index 5c420448ed..4a67a89208 100644
 --- a/browser/components/preferences/config/tabs-browsing.mjs
 +++ b/browser/components/preferences/config/tabs-browsing.mjs
-@@ -627,16 +627,6 @@ Preferences.addSetting({
+@@ -643,16 +643,6 @@ Preferences.addSetting({
    },
  });
  
@@ -21,7 +21,7 @@ index 4d7a6976de..1a0e28ef4c 100644
  // Browser layout settings
  Preferences.addSetting({
    id: "browserLayoutRadioGroup",
-@@ -864,25 +854,6 @@ SettingGroupManager.registerGroups({
+@@ -885,25 +875,6 @@ SettingGroupManager.registerGroups({
        },
      ],
    },
@@ -47,7 +47,7 @@ index 4d7a6976de..1a0e28ef4c 100644
    // Bug 2028609: the following sections are needed to ensure settings keep
    // working in legacy views, and can be removed when the pref is flipped
    drm: {
-@@ -914,18 +885,6 @@ SettingGroupManager.registerGroups({
+@@ -935,18 +906,6 @@ SettingGroupManager.registerGroups({
            },
          ],
        },

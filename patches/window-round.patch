@@ -1,0 +1,18 @@
+Fixes wrong rounding behavior with RFP on GTK platforms
+---
+diff --git a/xpfe/appshell/AppWindow.cpp b/xpfe/appshell/AppWindow.cpp
+index f4a03d3955..0568feb5df 100644
+--- a/xpfe/appshell/AppWindow.cpp
++++ b/xpfe/appshell/AppWindow.cpp
+@@ -1044,6 +1044,11 @@ NS_IMETHODIMP AppWindow::ForceRoundedDimensions() {
+   // Calculate the chrome UI size.
+   CSSIntSize chromeSizeCSS = windowSizeCSS - contentSizeCSS;
+ 
++#ifdef MOZ_WIDGET_GTK
++  chromeSizeCSS.height -=
++      GetOuterToInnerSizeDifferenceInCSSPixels(mWindow, scale).height;
++#endif
++
+   CSSIntSize targetSizeCSS;
+   // Here, we use the available screen dimensions as the input dimensions to
+   // force the window to be rounded as the maximum available content size.

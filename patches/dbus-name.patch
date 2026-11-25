@@ -1,10 +1,10 @@
 Replaced hardcoded org.mozilla D-Bus identifier with our own
 ---
 diff --git a/toolkit/components/remote/nsDBusRemoteClient.cpp b/toolkit/components/remote/nsDBusRemoteClient.cpp
-index bd1fe5f9cf..bb68321ba9 100644
+index 335d92b853..add5c12a9a 100644
 --- a/toolkit/components/remote/nsDBusRemoteClient.cpp
 +++ b/toolkit/components/remote/nsDBusRemoteClient.cpp
-@@ -73,14 +73,14 @@ bool nsDBusRemoteClient::GetRemoteDestinationName(const char* aProgram,
+@@ -74,14 +74,14 @@ bool nsDBusRemoteClient::GetRemoteDestinationName(const char* aProgram,
    mozilla::XREAppData::SanitizeNameForDBus(profileName);
  
    aDestinationName =
@@ -21,7 +21,7 @@ index bd1fe5f9cf..bb68321ba9 100644
      if (!g_dbus_is_name(aDestinationName.get())) {
        // We failed completely to get a valid bus name - just quit.
        LOG("  failed to validate profile DBus name");
-@@ -118,7 +118,7 @@ nsresult nsDBusRemoteClient::DoSendDBusCommandLine(const char* aProfile,
+@@ -119,7 +119,7 @@ nsresult nsDBusRemoteClient::DoSendDBusCommandLine(const char* aProfile,
    }
  
    nsAutoCString remoteInterfaceName;
@@ -31,7 +31,7 @@ index bd1fe5f9cf..bb68321ba9 100644
    LOG("  DBus destination: %s\n", destinationName.get());
    LOG("  DBus path: %s\n", pathName.get());
 diff --git a/toolkit/components/remote/nsDBusRemoteServer.cpp b/toolkit/components/remote/nsDBusRemoteServer.cpp
-index 226b2dc528..f2477798ae 100644
+index 740f967a65..63777a4f10 100644
 --- a/toolkit/components/remote/nsDBusRemoteServer.cpp
 +++ b/toolkit/components/remote/nsDBusRemoteServer.cpp
 @@ -25,7 +25,7 @@ static const char* introspect_template =
@@ -52,7 +52,7 @@ index 226b2dc528..f2477798ae 100644
  
    if ((strcmp("OpenURL", aMethodName) != 0) ||
        (strcmp(ourInterfaceName.get(), aInterfaceName) != 0)) {
-@@ -199,7 +199,7 @@ nsresult nsDBusRemoteServer::Startup(const char* aAppName,
+@@ -182,7 +182,7 @@ nsresult nsDBusRemoteServer::Startup(const char* /*aAppName*/,
  
    mozilla::XREAppData::SanitizeNameForDBus(profileName);
  
@@ -61,7 +61,7 @@ index 226b2dc528..f2477798ae 100644
                            profileName.get());
    if (busName.Length() > DBUS_MAXIMUM_NAME_LENGTH) {
      busName.Truncate(DBUS_MAXIMUM_NAME_LENGTH);
-@@ -207,7 +207,7 @@ nsresult nsDBusRemoteServer::Startup(const char* aAppName,
+@@ -190,7 +190,7 @@ nsresult nsDBusRemoteServer::Startup(const char* /*aAppName*/,
  
    // We don't have a valid busName yet - try to create a default one.
    if (!g_dbus_is_name(busName.get())) {
